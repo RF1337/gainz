@@ -1,50 +1,30 @@
-# Welcome to your Expo app 👋
+# 🏋️ Fitness Tracker App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A sleek and intuitive mobile app built with **React Native** and **Expo Router**, designed to help users log workouts, track activity, and stay consistent with their fitness journey.
 
-## Get started
+## ✨ Features
 
-1. Install dependencies
+- 📆 **Calendar Log Picker**  
+  Scrollable, localized horizontal calendar to select and view workouts by date.
 
-   ```bash
-   npm install
-   ```
+- 🧠 **Smart FAB Menu**  
+  Central "Quick Add" button with animated radial actions to log food, sleep, hydration, and more.
 
-2. Start the app
+- 🌙 **Dark/Light Mode**  
+  Theme-aware UI using a custom theme context, fully adaptable based on system appearance.
 
-   ```bash
-   npx expo start
-   ```
+- 📊 **Workout Logs**  
+  View daily workout history and exercises, filtered by selected calendar date.
 
-In the output, you'll find options to open the app in a
+- 🎯 **Modern Design**  
+  Inspired by real fitness apps like Lifesum & Myfitnesspal. Focus on minimalism, clarity, and speed.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 📱 Tech Stack
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- **React Native (Expo)**
+- **Expo Router** (file-based routing)
+- **TypeScript** (fully typed)
+- **dayjs** for date formatting & localization
+- **Animated API** for dynamic UI
+- **Custom Contexts** for theming
+- **Ionicons** for iconography
