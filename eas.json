@@ -1,0 +1,24 @@
+{
+  "cli": {
+    "version": ">= 3.0.0"
+  },
+  "build": {
+    "development": {
+      "distribution": "internal",
+      "ios": {
+        "buildType": "development"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "ios": {
+        "buildType": "app-store"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  }
+}

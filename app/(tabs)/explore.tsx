@@ -1,110 +1,291 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+// app/(tabs)/explore/index.tsx
+import { useThemeContext } from "@/context/ThemeContext";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useMemo, useState } from "react";
+import {
+  FlatList,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+type Category = {
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  key: string; // used for filtering
+};
 
-export default function TabTwoScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
+type TrendingItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUri: string;
+  category: string; // e.g. "Recipes", "Workout Plans"
+  route: string;
+};
+
+export default function ExploreScreen() {
+  const { scheme } = useThemeContext();
+  const isDark = scheme === "dark";
+  const colors = {
+    background: isDark ? "#000" : "#fff",
+    card: isDark ? "#1e1e1e" : "#f2f2f2",
+    text: isDark ? "#fff" : "#000",
+    subText: isDark ? "#aaa" : "#555",
+    accent: "#ff6b00",
+    inputBg: isDark ? "#121212" : "#f2f2f2",
+    placeholder: isDark ? "#666" : "#999",
+  };
+
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const categories: Category[] = [
+    { label: "Meal Plans", icon: "nutrition-outline", key: "Meal Plans" },
+    { label: "Recipes", icon: "restaurant-outline", key: "Recipes" },
+    { label: "Workout Plans", icon: "barbell-outline", key: "Workout Plans" },
+    { label: "Exercise Library", icon: "body-outline", key: "Exercise Library" },
+    // Add more categories as needed
+  ];
+
+  const trending: TrendingItem[] = [
+    {
+      id: "1",
+      title: "Keto Chicken Salad",
+      subtitle: "High-Protein Recipe",
+      imageUri: "https://via.placeholder.com/300x180",
+      category: "Recipes",
+      route: "/explore/recipes/keto-chicken-salad",
+    },
+    {
+      id: "2",
+      title: "Beginner Full Body",
+      subtitle: "Starter Workout Plan",
+      imageUri: "https://via.placeholder.com/300x180",
+      category: "Workout Plans",
+      route: "/explore/workout-plans/beginner-full-body",
+    },
+    {
+      id: "3",
+      title: "Low-Carb Meal Prep",
+      subtitle: "Meal Plan for Weight Loss",
+      imageUri: "https://via.placeholder.com/300x180",
+      category: "Meal Plans",
+      route: "/explore/meal-plans/low-carb-meal-prep",
+    },
+    {
+      id: "4",
+      title: "Push/Pull/Legs",
+      subtitle: "Advanced Split Routine",
+      imageUri: "https://via.placeholder.com/300x180",
+      category: "Workout Plans",
+      route: "/explore/workout-plans/push-pull-legs",
+    },
+    {
+      id: "5",
+      title: "Healthy Smoothie",
+      subtitle: "Quick Breakfast Recipe",
+      imageUri: "https://via.placeholder.com/300x180",
+      category: "Recipes",
+      route: "/explore/recipes/healthy-smoothie",
+    },
+    {
+      id: "6",
+      title: "Yoga for Flexibility",
+      subtitle: "Exercise Library Highlight",
+      imageUri: "https://via.placeholder.com/300x180",
+      category: "Exercise Library",
+      route: "/explore/exercise-library/yoga-for-flexibility",
+    },
+    // Add more items as needed
+  ];
+
+  // Filter trending items based on selectedCategory and searchQuery
+  const filteredTrending = useMemo(() => {
+    return trending.filter((item) => {
+      const matchesCategory = selectedCategory ? item.category === selectedCategory : true;
+      const lowerTitle = item.title.toLowerCase();
+      const lowerSubtitle = item.subtitle.toLowerCase();
+      const lowerQuery = searchQuery.toLowerCase();
+      const matchesSearch =
+        lowerTitle.includes(lowerQuery) || lowerSubtitle.includes(lowerQuery);
+      return matchesCategory && matchesSearch;
+    });
+  }, [selectedCategory, searchQuery]);
+
+  const renderCategory = ({ item }: { item: Category }) => {
+    return (
+      <TouchableOpacity
+        style={[
+          styles.categoryCard,
+          { backgroundColor: colors.card },
+          selectedCategory === item.key && { backgroundColor: colors.accent },
+        ]}
+        onPress={() => setSelectedCategory(selectedCategory === item.key ? null : item.key)}
+      >
+        <Ionicons
+          name={item.icon}
+          size={28}
+          color={selectedCategory === item.key ? "#fff" : colors.accent}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+        <Text
+          style={[
+            styles.categoryLabel,
+            { color: selectedCategory === item.key ? "#fff" : colors.text },
+          ]}
+        >
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderTrendingItem = ({ item }: { item: TrendingItem }) => (
+    <TouchableOpacity
+      style={[styles.trendingCard, { backgroundColor: colors.card }]}
+      onPress={() => router.push(item.route)}
+    >
+      <Image
+        source={{ uri: item.imageUri }}
+        style={styles.trendingImage}
+        resizeMode="cover"
+      />
+      <View style={styles.trendingTextContainer}>
+        <Text style={[styles.trendingTitle, { color: colors.text }]}>
+          {item.title}
+        </Text>
+        <Text style={[styles.trendingSubtitle, { color: colors.subText }]}>
+          {item.subtitle}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Search Bar */}
+      <View style={[styles.searchContainer, { backgroundColor: colors.inputBg }]}>
+        <Ionicons name="search-outline" size={20} color={colors.placeholder} />
+        <TextInput
+          style={[styles.searchInput, { color: colors.text }]}
+          placeholder="Search..."
+          placeholderTextColor={colors.placeholder}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Categories Section */}
+        <Text style={[styles.sectionHeader, { color: colors.text }]}>
+          Categories
+        </Text>
+        <FlatList
+          data={categories}
+          horizontal
+          keyExtractor={(item) => item.key}
+          renderItem={renderCategory}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesList}
+        />
+
+        {/* Trending Section */}
+        <Text style={[styles.sectionHeader, { color: colors.text, marginTop: 24 }]}>
+          Trending Now
+        </Text>
+        <FlatList
+          data={filteredTrending}
+          keyExtractor={(item) => item.id}
+          renderItem={renderTrendingItem}
+          scrollEnabled={false} // Let the parent ScrollView handle scrolling
+          contentContainerStyle={styles.trendingList}
+          ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: { flex: 1 },
+  scrollContent: {
+    paddingBottom: 32,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    margin: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-});
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
+    height: 40,
+  },
+  sectionHeader: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  categoriesList: {
+    paddingLeft: 16,
+    paddingVertical: 8,
+  },
+  categoryCard: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  categoryLabel: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  trendingList: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  trendingCard: {
+    width: "100%",
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  trendingImage: {
+    width: "100%",
+    height: 180,
+  },
+  trendingTextContainer: {
+    padding: 12,
+  },
+  trendingTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  trendingSubtitle: {
+    fontSize: 14,
+    marginTop: 4,
+  },
+});  
