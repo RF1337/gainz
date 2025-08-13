@@ -13,5 +13,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
-    ".env.d.ts"  ]
+    ".env.d.ts", "services/i18next.js"  ]
 }

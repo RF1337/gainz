@@ -1,20 +1,21 @@
 // app/settings/goals.tsx
-import { useThemeContext } from "@/context/ThemeContext";
+import BackButton from "@/components/BackButton";
+import Header from "@/components/Header";
+import ScreenWrapper from "@/components/ScreenWrapper";
 import { getGoal, setGoal } from "@/services/goalsService";
+import { useTheme } from "@/theme/ThemeProvider";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from "react-native";
 
 export default function GoalsSettingScreen() {
-  const { scheme } = useThemeContext();
-  const isDark = scheme === "dark";
+  const { ui } = useTheme();
 
   // Local state for each goal
   const [stepGoal, setStepGoal] = useState<string>("");
@@ -73,22 +74,21 @@ export default function GoalsSettingScreen() {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        styles.container,
-        { backgroundColor: isDark ? "#1e1e1e" : "#fff" },
-      ]}
-    >
+    <ScreenWrapper>
+      <Header
+        leftIcon={<BackButton />}
+        title="Goals"
+      />
       {/* Step Goal */}
       <View style={styles.row}>
         <View style={styles.iconLabel}>
           <Ionicons
             name="footsteps-outline"
             size={20}
-            color={isDark ? "#ff6b00" : "#666"}
+            color={ui.text}
             style={{ marginRight: 8 }}
           />
-          <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+          <Text style={[styles.label, { color: ui.text }]}>
             Daily Step Goal
           </Text>
         </View>
@@ -96,9 +96,9 @@ export default function GoalsSettingScreen() {
           style={[
             styles.input,
             {
-              backgroundColor: isDark ? "#333" : "#fff",
-              color: isDark ? "#fff" : "#000",
-              borderColor: isDark ? "#555" : "#ccc",
+              backgroundColor: ui.bgDark,
+              color: ui.text,
+              borderColor: ui.border,
             },
           ]}
           keyboardType="numeric"
@@ -106,7 +106,7 @@ export default function GoalsSettingScreen() {
           onChangeText={handleStepChange}
           returnKeyType="done"
           placeholder="e.g. 10000"
-          placeholderTextColor={isDark ? "#888" : "#aaa"}
+          placeholderTextColor={ui.textMuted}
         />
       </View>
 
@@ -116,10 +116,10 @@ export default function GoalsSettingScreen() {
           <Ionicons
             name="flame-outline"
             size={20}
-            color={isDark ? "#ff6b00" : "#666"}
+            color={ui.text}
             style={{ marginRight: 8 }}
           />
-          <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+          <Text style={[styles.label, { color: ui.text }]}>
             Daily Exercise Goal (kcal)
           </Text>
         </View>
@@ -127,9 +127,9 @@ export default function GoalsSettingScreen() {
           style={[
             styles.input,
             {
-              backgroundColor: isDark ? "#333" : "#fff",
-              color: isDark ? "#fff" : "#000",
-              borderColor: isDark ? "#555" : "#ccc",
+              backgroundColor: ui.bgDark,
+              color: ui.text,
+              borderColor: ui.border,
             },
           ]}
           keyboardType="numeric"
@@ -137,7 +137,7 @@ export default function GoalsSettingScreen() {
           onChangeText={handleExerciseChange}
           returnKeyType="done"
           placeholder="e.g. 300"
-          placeholderTextColor={isDark ? "#888" : "#aaa"}
+          placeholderTextColor={ui.textMuted}
         />
       </View>
 
@@ -147,10 +147,10 @@ export default function GoalsSettingScreen() {
           <Ionicons
             name="bed-outline"
             size={20}
-            color={isDark ? "#ff6b00" : "#666"}
+            color={ui.text}
             style={{ marginRight: 8 }}
           />
-          <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+          <Text style={[styles.label, { color: ui.text }]}>
             Daily Sleep Goal (hours)
           </Text>
         </View>
@@ -158,9 +158,9 @@ export default function GoalsSettingScreen() {
           style={[
             styles.input,
             {
-              backgroundColor: isDark ? "#333" : "#fff",
-              color: isDark ? "#fff" : "#000",
-              borderColor: isDark ? "#555" : "#ccc",
+              backgroundColor: ui.bgDark,
+              color: ui.text,
+              borderColor: ui.border,
             },
           ]}
           keyboardType="numeric"
@@ -168,7 +168,7 @@ export default function GoalsSettingScreen() {
           onChangeText={handleSleepChange}
           returnKeyType="done"
           placeholder="e.g. 8"
-          placeholderTextColor={isDark ? "#888" : "#aaa"}
+          placeholderTextColor={ui.textMuted}
         />
       </View>
 
@@ -178,10 +178,10 @@ export default function GoalsSettingScreen() {
           <Ionicons
             name="water-outline"
             size={20}
-            color={isDark ? "#ff6b00" : "#666"}
+            color={ui.text}
             style={{ marginRight: 8 }}
           />
-          <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+          <Text style={[styles.label, { color: ui.text }]}>
             Daily Water Goal (L)
           </Text>
         </View>
@@ -189,9 +189,9 @@ export default function GoalsSettingScreen() {
           style={[
             styles.input,
             {
-              backgroundColor: isDark ? "#333" : "#fff",
-              color: isDark ? "#fff" : "#000",
-              borderColor: isDark ? "#555" : "#ccc",
+              backgroundColor: ui.bgDark,
+              color: ui.text,
+              borderColor: ui.border,
             },
           ]}
           keyboardType="numeric"
@@ -199,10 +199,10 @@ export default function GoalsSettingScreen() {
           onChangeText={handleWaterChange}
           returnKeyType="done"
           placeholder="e.g. 3"
-          placeholderTextColor={isDark ? "#888" : "#aaa"}
+          placeholderTextColor={ui.textMuted}
         />
       </View>
-    </ScrollView>
+  </ScreenWrapper>
   );
 }
 

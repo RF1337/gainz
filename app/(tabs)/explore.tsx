@@ -1,291 +1,282 @@
 // app/(tabs)/explore/index.tsx
-import { useThemeContext } from "@/context/ThemeContext";
+
+import ScreenWrapper from "@/components/ScreenWrapper";
+import { ExploreSkeleton } from "@/components/Skeletons";
+import { supabase } from "@/lib/supabase";
+import { useTheme } from "@/theme/ThemeProvider";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import { default as React, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 type Category = {
+  id: number;
   label: string;
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  key: string; // used for filtering
+  icon_name: string;
+  key: string;
 };
 
-type TrendingItem = {
+type ItemRow = {
   id: string;
   title: string;
   subtitle: string;
-  imageUri: string;
-  category: string; // e.g. "Recipes", "Workout Plans"
+  image_uri: string;
+  categories_key: string;
   route: string;
+  is_trending: boolean;
 };
 
 export default function ExploreScreen() {
-  const { scheme } = useThemeContext();
-  const isDark = scheme === "dark";
-  const colors = {
-    background: isDark ? "#000" : "#fff",
-    card: isDark ? "#1e1e1e" : "#f2f2f2",
-    text: isDark ? "#fff" : "#000",
-    subText: isDark ? "#aaa" : "#555",
-    accent: "#ff6b00",
-    inputBg: isDark ? "#121212" : "#f2f2f2",
-    placeholder: isDark ? "#666" : "#999",
-  };
-
+  const { ui } = useTheme();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const categories: Category[] = [
-    { label: "Meal Plans", icon: "nutrition-outline", key: "Meal Plans" },
-    { label: "Recipes", icon: "restaurant-outline", key: "Recipes" },
-    { label: "Workout Plans", icon: "barbell-outline", key: "Workout Plans" },
-    { label: "Exercise Library", icon: "body-outline", key: "Exercise Library" },
-    // Add more categories as needed
-  ];
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [items, setItems] = useState<ItemRow[]>([]);
+  const [loadingCats, setLoadingCats] = useState(true);
+  const [loadingItems, setLoadingItems] = useState(true);
 
-  const trending: TrendingItem[] = [
-    {
-      id: "1",
-      title: "Keto Chicken Salad",
-      subtitle: "High-Protein Recipe",
-      imageUri: "https://via.placeholder.com/300x180",
-      category: "Recipes",
-      route: "/explore/recipes/keto-chicken-salad",
-    },
-    {
-      id: "2",
-      title: "Beginner Full Body",
-      subtitle: "Starter Workout Plan",
-      imageUri: "https://via.placeholder.com/300x180",
-      category: "Workout Plans",
-      route: "/explore/workout-plans/beginner-full-body",
-    },
-    {
-      id: "3",
-      title: "Low-Carb Meal Prep",
-      subtitle: "Meal Plan for Weight Loss",
-      imageUri: "https://via.placeholder.com/300x180",
-      category: "Meal Plans",
-      route: "/explore/meal-plans/low-carb-meal-prep",
-    },
-    {
-      id: "4",
-      title: "Push/Pull/Legs",
-      subtitle: "Advanced Split Routine",
-      imageUri: "https://via.placeholder.com/300x180",
-      category: "Workout Plans",
-      route: "/explore/workout-plans/push-pull-legs",
-    },
-    {
-      id: "5",
-      title: "Healthy Smoothie",
-      subtitle: "Quick Breakfast Recipe",
-      imageUri: "https://via.placeholder.com/300x180",
-      category: "Recipes",
-      route: "/explore/recipes/healthy-smoothie",
-    },
-    {
-      id: "6",
-      title: "Yoga for Flexibility",
-      subtitle: "Exercise Library Highlight",
-      imageUri: "https://via.placeholder.com/300x180",
-      category: "Exercise Library",
-      route: "/explore/exercise-library/yoga-for-flexibility",
-    },
-    // Add more items as needed
-  ];
+  useEffect(() => {
+    async function loadCategories() {
+      setLoadingCats(true);
+      try {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("id, label, icon_name, key")
+          .order("label", { ascending: true });
 
-  // Filter trending items based on selectedCategory and searchQuery
-  const filteredTrending = useMemo(() => {
-    return trending.filter((item) => {
-      const matchesCategory = selectedCategory ? item.category === selectedCategory : true;
-      const lowerTitle = item.title.toLowerCase();
-      const lowerSubtitle = item.subtitle.toLowerCase();
-      const lowerQuery = searchQuery.toLowerCase();
-      const matchesSearch =
-        lowerTitle.includes(lowerQuery) || lowerSubtitle.includes(lowerQuery);
-      return matchesCategory && matchesSearch;
+        if (error) {
+          console.error("Error loading categories:", error.message);
+          setCategories([]);
+        } else {
+          setCategories(data || []);
+        }
+      } catch (err: any) {
+        console.error("Exception in loadCategories:", err.message);
+        setCategories([]);
+      } finally {
+        setLoadingCats(false);
+      }
+    }
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    async function loadItems() {
+      setLoadingItems(true);
+      try {
+        const { data, error } = await supabase
+          .from("items")
+          .select(
+            `id, title, subtitle, image_uri, route, is_trending, categories (key)`
+          )
+          .eq("is_trending", true)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error loading items:", error.message);
+          setItems([]);
+        } else if (data) {
+          const transformed: ItemRow[] = (data as any[]).map((row) => ({
+            id: row.id,
+            title: row.title,
+            subtitle: row.subtitle,
+            image_uri: row.image_uri,
+            categories_key: row.categories?.key ?? "",
+            route: row.route,
+            is_trending: row.is_trending,
+          }));
+          setItems(transformed);
+        } else {
+          setItems([]);
+        }
+      } catch (err: any) {
+        console.error("Exception in loadItems:", err.message);
+        setItems([]);
+      } finally {
+        setLoadingItems(false);
+      }
+    }
+    loadItems();
+  }, []);
+
+  const filtered = useMemo(() => {
+    return items.filter((it) => {
+      const inCategory = selectedCategory
+        ? it.categories_key === selectedCategory
+        : true;
+      const titleLower = it.title.toLowerCase();
+      const subLower = it.subtitle.toLowerCase();
+      const queryLower = searchQuery.toLowerCase();
+      return inCategory && (titleLower.includes(queryLower) || subLower.includes(queryLower));
     });
-  }, [selectedCategory, searchQuery]);
+  }, [items, selectedCategory, searchQuery]);
 
+  if (loadingCats || loadingItems) return <ExploreSkeleton />;
   const renderCategory = ({ item }: { item: Category }) => {
-    return (
+  const isSelected = selectedCategory === item.key;
+
+  return (
+    <View style={{ flexDirection: "column", alignItems: "center" }}>
       <TouchableOpacity
-        style={[
-          styles.categoryCard,
-          { backgroundColor: colors.card },
-          selectedCategory === item.key && { backgroundColor: colors.accent },
-        ]}
-        onPress={() => setSelectedCategory(selectedCategory === item.key ? null : item.key)}
+        style={styles.categoryCard}
+        onPress={() =>
+          setSelectedCategory(isSelected ? null : item.key)
+        }
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Ionicons
-          name={item.icon}
-          size={28}
-          color={selectedCategory === item.key ? "#fff" : colors.accent}
+          name={item.icon_name as any}
+          size={24}
+          color={isSelected ? ui.text : ui.textMuted}
         />
-        <Text
-          style={[
-            styles.categoryLabel,
-            { color: selectedCategory === item.key ? "#fff" : colors.text },
-          ]}
-        >
-          {item.label}
-        </Text>
       </TouchableOpacity>
-    );
-  };
 
-  const renderTrendingItem = ({ item }: { item: TrendingItem }) => (
+      <Text
+        style={[
+          styles.categoryLabel,
+          { color: isSelected ? ui.text : ui.textMuted },
+        ]}
+        numberOfLines={1}
+      >
+        {item.label}
+      </Text>
+
+      {/* Underline only when selected */}
+      {isSelected && (
+        <View
+          style={[
+            styles.categoryUnderline,
+            { backgroundColor: ui.text },
+          ]}
+        />
+      )}
+    </View>
+  );
+};
+
+
+  const renderItem = ({ item }: { item: ItemRow }) => (
     <TouchableOpacity
-      style={[styles.trendingCard, { backgroundColor: colors.card }]}
-      onPress={() => router.push(item.route)}
+      style={[styles.trendingCard, { backgroundColor: ui.bg }, styles.cardShadow]}
+      onPress={() => router.push(`/explore-item/${item.id}` as any)}
     >
       <Image
-        source={{ uri: item.imageUri }}
+        source={{ uri: item.image_uri }}
         style={styles.trendingImage}
         resizeMode="cover"
       />
-      <View style={styles.trendingTextContainer}>
-        <Text style={[styles.trendingTitle, { color: colors.text }]}>
-          {item.title}
-        </Text>
-        <Text style={[styles.trendingSubtitle, { color: colors.subText }]}>
-          {item.subtitle}
-        </Text>
+      <View style={[styles.trendingInfo]}>
+        <Text style={[styles.trendingTitle, { color: ui.text }]}> {item.title} </Text>
+        <Text style={[styles.trendingSubtitle, { color: ui.textMuted }]}> {item.subtitle} </Text>
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Search Bar */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.inputBg }]}>
-        <Ionicons name="search-outline" size={20} color={colors.placeholder} />
+    <ScreenWrapper>
+      <View style={[styles.searchContainer, styles.cardShadow, { backgroundColor: ui.bg }]}>
+        <Ionicons name="search-outline" size={20} color={ui.textMuted} />
         <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
+          style={[styles.searchInput, { color: ui.text }]}
           placeholder="Search..."
-          placeholderTextColor={colors.placeholder}
+          placeholderTextColor={ui.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Categories Section */}
-        <Text style={[styles.sectionHeader, { color: colors.text }]}>
-          Categories
-        </Text>
         <FlatList
           data={categories}
           horizontal
-          keyExtractor={(item) => item.key}
+          keyExtractor={(cat) => cat.key}
           renderItem={renderCategory}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesList}
         />
 
-        {/* Trending Section */}
-        <Text style={[styles.sectionHeader, { color: colors.text, marginTop: 24 }]}>
-          Trending Now
-        </Text>
+        {/*
+        <Text style={[styles.sectionHeader, { color: ui.text, marginTop: 16 }]}>Trending Now</Text>
+        */}
         <FlatList
-          data={filteredTrending}
-          keyExtractor={(item) => item.id}
-          renderItem={renderTrendingItem}
-          scrollEnabled={false} // Let the parent ScrollView handle scrolling
-          contentContainerStyle={styles.trendingList}
+          data={filtered}
+          keyExtractor={(it) => it.id}
+          renderItem={renderItem}
+          scrollEnabled={false}
+          contentContainerStyle={[styles.trendingList, styles.cardShadow]}
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         />
       </ScrollView>
-    </SafeAreaView>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scrollContent: {
-    paddingBottom: 32,
-  },
+  scrollContent: { paddingBottom: 32 },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    margin: 16,
+    marginVertical: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 100,
   },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-    height: 40,
-  },
+  searchInput: { flex: 1, marginLeft: 8, fontSize: 16, height: 40 },
   sectionHeader: {
     fontSize: 20,
-    fontWeight: "700",
-    marginHorizontal: 16,
+    fontWeight: "600",
     marginBottom: 12,
   },
-  categoriesList: {
-    paddingLeft: 16,
-    paddingVertical: 8,
-  },
+  categoriesList: { flex: 1, paddingVertical: 8, gap: 24 },
   categoryCard: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
+    width: 50,
+    height: 50,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
   },
   categoryLabel: {
-    marginTop: 8,
     fontSize: 14,
     fontWeight: "600",
     textAlign: "center",
   },
-  trendingList: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
+  trendingList: { paddingTop: 8 },
   trendingCard: {
     width: "100%",
     borderRadius: 12,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
   },
-  trendingImage: {
-    width: "100%",
-    height: 180,
-  },
-  trendingTextContainer: {
+  trendingImage: { width: "100%", height: 180 },
+  trendingInfo: {
     padding: 12,
   },
-  trendingTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+  trendingTitle: { fontSize: 18, fontWeight: "600" },
+  trendingSubtitle: { fontSize: 14, marginTop: 4 },
+  cardShadow: {
+    shadowColor: "hsla(0, 0%, 80%, 1.00)",  
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+
+    elevation: 2,
   },
-  trendingSubtitle: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-});  
+  categoryUnderline: {
+  height: 2,
+  borderRadius: 1,
+  marginTop: 6,
+  alignSelf: "stretch",
+}
+});

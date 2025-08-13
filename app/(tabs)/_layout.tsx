@@ -10,12 +10,11 @@ import {
 import AnimatedTabIcon from '@/components/AnimatedTabIcon';
 import FabMenu from '@/components/FabMenu';
 import { HapticTab } from '@/components/HapticTab';
-import { useThemeContext } from '@/context/ThemeContext';
+import { useTheme } from '@/theme/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function TabLayout() {
-  const { scheme } = useThemeContext();
-  const isDark = scheme === 'dark';
+  const { ui } = useTheme();
 
   const [fabVisible, setFabVisible] = useState(false);
   const toggleFabMenu = () => setFabVisible(!fabVisible);
@@ -30,31 +29,29 @@ export default function TabLayout() {
     }).start();
   }, [fabVisible]);
 
-const rotate = rotation.interpolate({
-  inputRange: [0, 1],
-  outputRange: ['0deg', '45deg'], // Rotates 45 degrees to make an "X"
-});
-
-  const tabBarBackgroundColor = isDark ? '#1e1e1e' : '#f2f2f2';
-  const activeTint = isDark ? '#ffffff' : '#000000';
-  const inactiveTint = isDark ? '#cccccc' : '#888888';
+  const rotate = rotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '45deg'], // Rotates 45 degrees to make an "X"
+  });
 
   return (
     <>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: activeTint,
-          tabBarInactiveTintColor: inactiveTint,
+          tabBarActiveTintColor: ui.text,
+          tabBarInactiveTintColor: ui.textMuted,
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarStyle: Platform.select({
             ios: {
               position: 'absolute',
-              backgroundColor: tabBarBackgroundColor,
+              borderTopColor: ui.bg,
+              backgroundColor: ui.bg,
               height: 70,
             },
             default: {
-              backgroundColor: tabBarBackgroundColor,
+              borderTopWidth: 0,
+              backgroundColor: ui.bg,
               height: 70,
             },
           }),
@@ -64,8 +61,8 @@ const rotate = rotation.interpolate({
           name="index"
           options={{
             title: 'Home',
-            tabBarIcon: ({ focused, color, size }) => (
-              <AnimatedTabIcon name={focused ? 'home' : 'home-outline'} color={color} size={size} />
+            tabBarIcon: ({ focused, size }) => (
+              <AnimatedTabIcon name={focused ? 'home' : 'home-outline'} color={ui.text} size={size} />
             ),
           }}
         />
@@ -74,8 +71,8 @@ const rotate = rotation.interpolate({
           name="explore"
           options={{
             title: 'Explore',
-            tabBarIcon: ({ focused, color, size }) => (
-              <AnimatedTabIcon name={focused ? 'compass' : 'compass-outline'} color={color} size={size} />
+            tabBarIcon: ({ focused, size }) => (
+              <AnimatedTabIcon name={focused ? 'compass' : 'compass-outline'} color={ui.text} size={size} />
             ),
           }}
         />
@@ -102,8 +99,8 @@ const rotate = rotation.interpolate({
           name="progress"
           options={{
             title: 'Progress',
-            tabBarIcon: ({ focused, color, size }) => (
-              <AnimatedTabIcon name={focused ? 'trending-up' : 'trending-up-outline'} color={color} size={size} />
+            tabBarIcon: ({ focused, size }) => (
+              <AnimatedTabIcon name={focused ? 'trending-up' : 'trending-up-outline'} color={ui.text} size={size} />
             ),
           }}
         />
@@ -112,15 +109,15 @@ const rotate = rotation.interpolate({
           name="profile"
           options={{
             title: 'Profile',
-            tabBarIcon: ({ focused, color, size }) => (
-              <AnimatedTabIcon name={focused ? 'person-circle' : 'person-circle-outline'} color={color} size={size} />
+            tabBarIcon: ({ focused, size }) => (
+              <AnimatedTabIcon name={focused ? 'person-circle' : 'person-circle-outline'} color={ui.text} size={size} />
             ),
           }}
         />
       </Tabs>
 
       {/* FAB menu toggle */}
-{fabVisible && <FabMenu onClose={() => setFabVisible(false)} />}
+      {fabVisible && <FabMenu onClose={() => setFabVisible(false)} />}
     </>
   );
 }
@@ -131,26 +128,23 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#ff6b00',
+    backgroundColor: "rgba(0, 128, 255, 1)",
     justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
+    shadowColor: "hsla(0, 0%, 80%, 1.00)",  
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 2,
   },
   fabTabCenter: {
-  position: 'absolute',
-  bottom: 10,
-  left: '50%',
-  transform: [{ translateX: -30 }], // Half of width (60/2) to center it
-  zIndex: 10,
-},
+    position: 'absolute',
+    bottom: 10,
+    left: '50%',
+    transform: [{ translateX: -30 }], // Half of width (60/2) to center it
+    zIndex: 10,
+  },
 });

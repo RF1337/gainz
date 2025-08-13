@@ -1,17 +1,17 @@
 // components/Avatar.tsx
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Button,
-    Image,
-    StyleSheet,
-    View
+  ActivityIndicator,
+  Alert,
+  Button,
+  Image,
+  StyleSheet,
+  View
 } from 'react-native';
 import {
-    Asset,
-    ImageLibraryOptions,
-    launchImageLibrary,
+  Asset,
+  ImageLibraryOptions,
+  launchImageLibrary,
 } from 'react-native-image-picker';
 import { supabase } from '../lib/supabase';
 

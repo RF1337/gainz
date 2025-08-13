@@ -1,19 +1,19 @@
 // app/(tabs)/workouts/new-program.tsx
+import ScreenWrapper from "@/components/ScreenWrapper";
 import { supabase } from "@/lib/supabase";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput
 } from "react-native";
 
 export default function NewProgramScreen() {
+  const ui = useTheme();
   const router = useRouter();
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export default function NewProgramScreen() {
 
     // 2) Insert into Program table
     const { error: insertError } = await supabase
-      .from("program")
+      .from("programs")
       .insert([{ name: name.trim(), user_id: user.id }]);
 
     if (insertError) {
@@ -53,11 +53,7 @@ export default function NewProgramScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.select({ ios: "padding", android: undefined })}
-      style={styles.container}
-    >
-      <View style={styles.form}>
+      <ScreenWrapper>
         <Text style={styles.label}>Program Name</Text>
         <TextInput
           style={styles.input}
@@ -85,15 +81,12 @@ export default function NewProgramScreen() {
         >
           <Text style={styles.cancelText}>Cancel</Text>
         </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+      </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 16, backgroundColor: "#fff" },
   form: {
-    backgroundColor: "#fafafa",
     borderRadius: 8,
     padding: 20,
     shadowColor: "#000",
@@ -110,7 +103,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 16,
     marginBottom: 20,
-    backgroundColor: "#fff",
   },
   button: {
     backgroundColor: "#ff6b00",

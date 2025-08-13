@@ -1,287 +1,264 @@
-// app/(tabs)/settings/profile.tsx
-import AvatarUploader from '@/components/AvatarUploader';
-import { supabase } from '@/lib/supabase';
-import { Ionicons } from '@expo/vector-icons';
-import type { Session } from '@supabase/supabase-js';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import AvatarIcon from "@/components/AvatarIcon";
+import Header from "@/components/Header";
+import ScreenWrapper from "@/components/ScreenWrapper";
+import { useTranslation } from "@/hooks/useTranslation";
+import { supabase } from "@/lib/supabase";
+import { useTheme } from "@/theme/ThemeProvider";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-} from 'react-native';
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
 
 export default function ProfileScreen() {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [displayName, setDisplayName] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const {ui} = useTheme();
+  const { t } = useTranslation();
 
-  // 1. On mount, fetch current session & profile
+  const [workouts, setWorkouts] = useState(0);
+  const [followers, setFollowers] = useState(0);
+  const [following, setFollowing] = useState(0);
+  const [username, setUsername] = useState("user");
+
   useEffect(() => {
-    async function getSessionAndProfile() {
+  const fetchUserProfile = async () => {
+    try {
+      // Get logged-in user
       const {
-        data: { session: currentSession },
-        error: sessionError,
-      } = await supabase.auth.getSession();
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (sessionError) {
-        Alert.alert('Error', sessionError.message);
-        return;
-      }
-      if (!currentSession) {
-        router.replace('/(auth)');
-        return;
-      }
+      if (userError || !user) return;
 
-      setSession(currentSession);
-
-      // fetch profile row
-      const { data, error: fetchError, status } = await supabase
-        .from('profile')
-        .select('display_name, avatar_url')
-        .eq('id', currentSession.user.id)
+      // Fetch user profile data (adjust table/column names to your schema)
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles") // or "profiles" if your table is plural
+        .select("username")
+        .eq("id", user.id)
         .single();
 
-      if (fetchError && status !== 406) {
-        Alert.alert('Error', fetchError.message);
-      } else if (data) {
-        setDisplayName(data.display_name || '');
-        setAvatarUrl(data.avatar_url);
+      if (!profileError && profile?.username) {
+        setUsername(profile.username);
       }
-      setLoading(false);
-    }
 
-    getSessionAndProfile();
+      // Fetch workout count
+      const { count, error: workoutError } = await supabase
+        .from("workout_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id); // adjust if your schema differs
 
-    // listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (!newSession) {
-        router.replace('/(auth)');
-      } else {
-        setSession(newSession);
-        fetchProfile(newSession);
+      if (!workoutError && typeof count === "number") {
+        setWorkouts(count);
       }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // 2. Fetch profile helper
-  async function fetchProfile(currentSession: Session) {
-    try {
-      setLoading(true);
-      const userId = currentSession.user.id;
-      const { data, error, status } = await supabase
-        .from('profile')
-        .select('display_name, avatar_url')
-        .eq('id', userId)
-        .single();
-
-      if (error && status !== 406) throw error;
-      if (data) {
-        setDisplayName(data.display_name || '');
-        setAvatarUrl(data.avatar_url);
-      }
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error("Failed to fetch profile info:", error);
     }
-  }
+  };
 
-  // 3. Upsert displayName + avatar_url
-  async function updateProfile({
-    display_name,
-    avatar_url,
-  }: {
-    display_name: string;
-    avatar_url: string | null;
-  }) {
-    try {
-      setLoading(true);
-      if (!session?.user) throw new Error('No user on the session!');
+  fetchUserProfile();
+}, []);
 
-      const updates = {
-        id: session.user.id,
-        display_name,
-        avatar_url,
-        updated_at: new Date(),
-      };
-
-      const { error } = await supabase.from('profile').upsert(updates);
-      if (error) throw error;
-      Alert.alert('Success', 'Your profile has been updated.');
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // 4. Callback for when AvatarUploader returns the new path
-  function handleAvatarUpload(path: string) {
-    setAvatarUrl(path);
-    updateProfile({ display_name: displayName, avatar_url: path });
-  }
-
-  // 5. Sign out handler
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    router.replace('/(auth)');
-  }
-
-  // 6. Navigate to the settings “index” screen
-  function goToSettings() {
-    // Because your file is at app/(tabs)/settings/index.tsx,
-    // the correct path to push is "/settings"
-    router.push('/settings');
-  }
-
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#ff6b00" />
+const renderRow = (
+    icon: string,
+    label: string,
+    subLabel: string,
+    onPress: () => void,
+    options?: { iconColor?: string; showChevron?: boolean }
+  ) => (
+    <TouchableOpacity style={[styles.row, { backgroundColor: ui.bg }]} onPress={onPress}>
+      <View style={styles.rowLabel}>
+        <Ionicons
+          name={icon as any}
+          size={20}
+          color={options?.iconColor ?? ui.textMuted}
+          style={styles.icon}
+        />
+        <View>
+          <Text style={[styles.label, { color: ui.text }]}>{label}</Text>
+          {subLabel.length > 0 && (
+            <Text style={[styles.subLabel, { color: ui.textMuted }]}>
+              {subLabel}
+            </Text>
+          )}
+        </View>
       </View>
-    );
-  }
+      {options?.showChevron !== false && (
+        <Ionicons name="chevron-forward-outline" size={20} color={ui.text} />
+      )}
+    </TouchableOpacity>
+  );
 
   return (
-    <View style={styles.container}>
-      {/* ─── Top Bar with “Settings” cog button ───────────────────────────── */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Profile</Text>
-        <Pressable onPress={goToSettings} style={styles.cogButton}>
-          <Ionicons name="settings-outline" size={28} color="#333" />
-        </Pressable>
+    <ScreenWrapper>
+      {/* Settings icon */}
+      <Header
+        leftIcon={
+          <TouchableOpacity onPress={() => router.push("/settings")}>
+          <Ionicons name="person-add-outline" size={24} color={ui.text} />
+        </TouchableOpacity>
+        }
+        title={t('navigation.profile')}
+        rightIcon={
+        <TouchableOpacity onPress={() => router.push("/settings")}>
+          <Ionicons name="settings-outline" size={24} color={ui.text} />
+        </TouchableOpacity>
+        }
+      />
+
+      {/* Avatar */}
+      <View style={styles.userRow}>
+        <TouchableOpacity onPress={() => router.push("/settings/profile")}>
+          <AvatarIcon size={135} />
+        </TouchableOpacity>
+        <Text style={[styles.displayName, { color: ui.text }]}>{username}</Text>
+        <Text style={[styles.username, { color: ui.textMuted }]}>@{username}</Text>
       </View>
 
-      {/* ─── Avatar Uploader ───────────────────────────────────────────────── */}
-      <View style={styles.avatarContainer}>
-        <AvatarUploader
-          bucket="user-avatars"
-          folderPath={session!.user.id}
-          onUploaded={handleAvatarUpload}
-          size={120}
-        />
+      {/* Stats */}
+      <View style={styles.statsRow}>
+        <View style={styles.stat}>
+          <Text style={[styles.statNumber, { color: ui.text }]}>{workouts}</Text>
+          <Text style={[styles.statLabel, { color: ui.textMuted }]}>Workouts</Text>
+        </View>
+        <View style={styles.verticalDivider} />
+        <View style={styles.stat}>
+          <Text style={[styles.statNumber, { color: ui.text }]}>{followers}</Text>
+          <Text style={[styles.statLabel, { color: ui.textMuted }]}>Followers</Text>
+        </View>
+        <View style={styles.verticalDivider} />
+        <View style={styles.stat}>
+          <Text style={[styles.statNumber, { color: ui.text }]}>{following}</Text>
+          <Text style={[styles.statLabel, { color: ui.textMuted }]}>Following</Text>
+        </View>
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons name="share-outline" size={24} color={ui.text} />
+        </TouchableOpacity>
       </View>
 
-      {/* ─── Email (read-only) ──────────────────────────────────────────────── */}
-      <View style={styles.field}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: '#f0f0f0', color: '#888' }]}
-          value={session!.user.email}
-          editable={false}
-        />
+      {/* Widgets */}
+      <View>
+        {renderRow("people-outline", "Friends", "Manage your friends", () => router.push("../settings/friends"))}
+        {renderRow("calendar-outline", "Workout History", "View your workout history", () => router.push("../settings/workout-history"))}
+        {renderRow("trophy-outline", "Goals", "Set and manage your goals", () => router.push("../settings/goals"))}
+        {renderRow("nutrition-outline", "Food Summary", "View daily and weekly intake", () => router.push("../settings/food-summary"))}
+        {renderRow("flame-outline", "Streaks", "Track workout consistency", () => router.push("../settings/streaks"))}
+        {renderRow("medal-outline", "Badges", "See your earned achievements", () => router.push("../settings/badges"))}
       </View>
-
-      {/* ─── Display Name ───────────────────────────────────────────────────── */}
-      <View style={styles.field}>
-        <Text style={styles.label}>Display Name</Text>
-        <TextInput
-          style={styles.input}
-          value={displayName}
-          onChangeText={setDisplayName}
-          placeholder="Enter a display name"
-          autoCapitalize="none"
-        />
-      </View>
-
-      {/* ─── Update Profile Button ──────────────────────────────────────────── */}
-      <View style={[styles.field, styles.mt20]}>
-        <Pressable
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={() =>
-            updateProfile({ display_name: displayName, avatar_url: avatarUrl })
-          }
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? 'Updating...' : 'Update Profile'}
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* ─── Sign Out Button ────────────────────────────────────────────────── */}
-      <View style={styles.field}>
-        <Pressable style={styles.button} onPress={handleSignOut}>
-          <Text style={styles.buttonText}>Sign Out</Text>
-        </Pressable>
-      </View>
-    </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
-    paddingTop: 32, // space for status bar
+  userInfo: {
+    flexDirection: "column",
   },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  userRow: {
+    alignItems: "center",
+    justifyContent: "center",
+    },
+  username: {
+    fontSize: 16,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  headerTitle: {
+  displayName: {
+    marginTop: 8,
     fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
   },
-  cogButton: {
-    padding: 8, // increase touch area
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 12,
   },
-  avatarContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
+  stat: {
+    alignItems: "center",
+    marginHorizontal: 16,
   },
-  field: {
-    marginBottom: 16,
+  statNumber: {
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  statLabel: {
+    fontSize: 13,
+    marginTop: 4,
+  },
+  verticalDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: "#444",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    marginTop: 8,
+    gap: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editButton: {
+    borderWidth: 1,
+    borderRadius: 32,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+  editText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeGrid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "center",
+  marginTop: 24,
+  gap: 16,
+},
+badgeBox: {
+  width: 120,
+  height: 100,
+  borderRadius: 16,
+  backgroundColor: "#2c2c2e", // or ui.bg if you want theme-aware
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 12,
+},
+badgeLabel: {
+  marginTop: 8,
+  fontSize: 14,
+  fontWeight: "500",
+  textAlign: "center",
+},
+  row: {
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    marginVertical: 4,
+  },
+  rowLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  icon: {
+    marginRight: 12,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#333',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    fontWeight: "500",
   },
-  mt20: {
-    marginTop: 20,
-  },
-  button: {
-    backgroundColor: '#ff6b00',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+  subLabel: {
+    fontSize: 12,
+    marginTop: 2,
   },
 });

@@ -1,12 +1,14 @@
 // app/faq.tsx
+import BackButton from '@/components/BackButton';
+import Header from '@/components/Header';
+import ScreenWrapper from '@/components/ScreenWrapper';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from 'react-native';
 
 export default function FAQScreen() {
@@ -55,8 +57,11 @@ export default function FAQScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.header}>Frequently Asked Questions</Text>
+    <ScreenWrapper>
+      <Header
+        leftIcon={<BackButton />}
+        title="FAQ"
+      />
       {faqs.map((item, index) => (
         <View key={index} style={styles.faqItem}>
           <Pressable
@@ -77,14 +82,14 @@ export default function FAQScreen() {
           )}
         </View>
       ))}
-    </ScrollView>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#000',
   },
   content: {
     padding: 16,

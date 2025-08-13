@@ -1,28 +1,25 @@
 // report.tsx
 
+import BackButton from '@/components/BackButton';
+import Header from '@/components/Header';
+import ScreenWrapper from '@/components/ScreenWrapper';
+import { useTheme } from '@/theme/ThemeProvider';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity
+  Alert,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity
 } from 'react-native';
 
-/**
- * ReportScreen
- *
- * A simple "Report a Problem" screen template.
- * - Includes a multiline TextInput for the user’s description.
- * - Validates that the report isn’t empty before submitting.
- * - On submit, shows an alert (stub for real submission logic).
- */
+
 const ReportScreen: React.FC = () => {
   const [description, setDescription] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+
+  const { ui } = useTheme();
 
   const handleSubmit = () => {
     if (!description.trim()) {
@@ -43,24 +40,19 @@ const ReportScreen: React.FC = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.select({ ios: 'padding', android: undefined })}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.heading}>Report a Problem</Text>
-
-        <Text style={styles.label}>What’s going on?</Text>
-        <TextInput
-          style={styles.textArea}
-          placeholder="Describe the issue here..."
-          placeholderTextColor="#999"
-          multiline
-          numberOfLines={6}
-          value={description}
+    <ScreenWrapper>
+      <Header
+        leftIcon={<BackButton />}
+        title="Report a problem"
+      />
+      <Text style={styles.label}>What’s going on?</Text>
+      <TextInput
+        style={styles.textArea}
+        placeholder="Describe the issue here..."
+        placeholderTextColor={ui.placeholder}
+        multiline
+        numberOfLines={6}
+        value={description}
           onChangeText={setDescription}
           textAlignVertical="top"
           editable={!loading}
@@ -75,8 +67,7 @@ const ReportScreen: React.FC = () => {
             {loading ? 'Submitting...' : 'Submit Report'}
           </Text>
         </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </ScreenWrapper>
   );
 };
 

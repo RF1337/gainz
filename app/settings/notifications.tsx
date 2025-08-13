@@ -1,24 +1,26 @@
 // app/settings/notifications.tsx
-import { useThemeContext } from "@/context/ThemeContext";
+import BackButton from "@/components/BackButton";
+import Header from "@/components/Header";
+import ScreenWrapper from "@/components/ScreenWrapper";
+import { useTheme } from "@/theme/ThemeProvider";
 import React, { useState } from "react";
 import { Platform, StyleSheet, Switch, Text, View } from "react-native";
 
 export default function NotificationsScreen() {
-  const { scheme } = useThemeContext();
-  const isDark = scheme === "dark";
+  const { ui } = useTheme();
 
   // Dummy local state (no actual scheduling logic)
   const [pushEnabled, setPushEnabled] = useState(false);
   const [dailyReminderEnabled, setDailyReminderEnabled] = useState(false);
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}>
-      <Text style={[styles.header, { color: isDark ? "#fff" : "#000" }]}>
-        Notification Settings
-      </Text>
-
-      <View style={[styles.row, { borderBottomColor: isDark ? "#444" : "#ccc" }]}>
-        <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+    <ScreenWrapper>
+      <Header
+        leftIcon={<BackButton />}
+        title="Notifications"
+      />
+      <View style={[styles.row, { borderBottomColor: ui.border }]}>
+        <Text style={[styles.label, { color: ui.text }]}>
           Enable Push Notifications
         </Text>
         <Switch
@@ -29,8 +31,8 @@ export default function NotificationsScreen() {
         />
       </View>
 
-      <View style={[styles.row, { borderBottomColor: isDark ? "#444" : "#ccc" }]}>
-        <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+      <View style={[styles.row, { borderBottomColor: ui.border }]}>
+        <Text style={[styles.label, { color: ui.text }]}>
           Daily 8 AM Reminder
         </Text>
         <Switch
@@ -43,11 +45,11 @@ export default function NotificationsScreen() {
       </View>
 
       {!pushEnabled && (
-        <Text style={[styles.note, { color: isDark ? "#888" : "#666" }]}>
+        <Text style={[styles.note, { color: ui.textMuted }]}>
           Enable push notifications to use daily reminders.
         </Text>
       )}
-    </View>
+    </ScreenWrapper>
   );
 }
 

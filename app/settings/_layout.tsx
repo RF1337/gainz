@@ -7,6 +7,8 @@ export default function SettingsLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
+        animation: 'slide_from_left',
+        animationDuration: 200,
       }}
     />
   );

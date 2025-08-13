@@ -1,0 +1,27 @@
+{
+    "da": {
+        "name": "Dansk",
+        "nativeName": "Dansk",
+        "flag": "🇩🇰"
+},
+    "de": {
+        "name": "Deutsch",
+        "nativeName": "Deutsch",
+        "flag": "🇩🇪"
+    },
+    "en": {
+        "name": "English",
+        "nativeName": "English",
+        "flag": "🇬🇧"
+    },
+    "es": {
+        "name": "Español",
+        "nativeName": "Español",
+        "flag": "🇪🇸"
+    },
+    "fr": {
+        "name": "Français",
+        "nativeName": "Français",
+        "flag": "🇫🇷"
+    }
+}

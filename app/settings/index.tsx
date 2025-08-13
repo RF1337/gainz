@@ -1,210 +1,168 @@
-import { useThemeContext } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React from "react";
 import {
   Alert,
-  Keyboard,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
+  Image,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View
 } from "react-native";
 
+import BackButton from "@/components/BackButton";
+import Header from "@/components/Header";
+import ScreenWrapper from "@/components/ScreenWrapper";
 import { supabase } from "@/lib/supabase";
-import { setGoal } from '@/services/goalsService';
+import { useTheme } from "@/theme/ThemeProvider";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import Toast from "react-native-toast-message";
 
 export default function SettingsScreen() {
-  const { scheme, toggleScheme } = useThemeContext();
-  const isDark = scheme === "dark";
-
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [stepGoal, setStepGoal] = useState("10000");
-
-  const handleStepGoalChange = async (text: string) => {
-    setStepGoal(text);
-    await setGoal('stepGoal', text);
-  };
+  const { ui } = useTheme();
 
   const handleClearData = () => {
     Alert.alert("Confirm", "Are you sure you want to clear all data?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Clear", style: "destructive", onPress: () => console.log("Data cleared") },
+      {
+        text: "Clear",
+        style: "destructive",
+        onPress: () => console.log("Data cleared"),
+      },
     ]);
   };
 
-  async function doLogout() {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        Alert.alert('Logout failed', error.message);
-      } else {
-        router.replace('/(auth)');
-      }
+  const doLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      Alert.alert("Logout failed", error.message);
+    } else {
+      router.replace("/(auth)");
     }
+  };
 
   const handleLogout = () => {
-    Alert.alert("Confirm", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Confirm", style: "destructive", onPress: () => doLogout() },
-    ]);
-  };
+  Alert.alert("Confirm", "Are you sure you want to log out?", [
+    { text: "Cancel", style: "cancel" },
+    { 
+      text: "Confirm", 
+      style: "destructive", 
+      onPress: () => {
+        doLogout(); // Your logout logic
+        Toast.show({
+          type: 'success',
+          text1: 'Logged out',
+          text2: 'You have been signed out.',
+        });
+      } 
+    },
+  ]);
+};
+
+  const renderRow = (
+    icon: string,
+    label: string,
+    subLabel: string,
+    onPress: () => void,
+    options?: { iconColor?: string; showChevron?: boolean }
+  ) => (
+    <TouchableOpacity style={[styles.row, { borderColor: ui.border }]} onPress={onPress}>
+      <View style={styles.rowLabel}>
+        <Ionicons
+          name={icon as any}
+          size={20}
+          color={options?.iconColor ?? ui.textMuted}
+          style={styles.icon}
+        />
+        <View>
+          <Text style={[styles.label, { color: ui.text }]}>{label}</Text>
+          {subLabel.length > 0 && (
+            <Text style={[styles.subLabel, { color: ui.textMuted }]}>
+              {subLabel}
+            </Text>
+          )}
+        </View>
+      </View>
+      {options?.showChevron !== false && (
+        <Ionicons name="chevron-forward-outline" size={20} color={ui.text} />
+      )}
+    </TouchableOpacity>
+  );
 
   return (
-  <SafeAreaView style={[styles.container, { backgroundColor: isDark ? "#121212" : "#fff" }]}>
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <ScrollView style={{ paddingHorizontal: 20 }}>
-        <Text style={[styles.title, { color: isDark ? "#fff" : "#000" }]}>Settings & privacy</Text>
+    <ScreenWrapper>
+      <Header
+        leftIcon={<BackButton />}
+        title="Settings"
+      />
 
-        {/* --- ACCOUNT --- */}
-        <Text style={[styles.sectionHeader, { color: isDark ? "#aaa" : "#666" }]}>Account</Text>
-        <View style={styles.row}>
-          <View style={{flexDirection: 'row'}}>
-            <Ionicons name="person-outline" size={20} color={isDark ? '#ff6b00' : '#666'} style={{ marginRight: 8 }} />
-            <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Profile</Text>
-          </View>
-        <Pressable onPress={() => router.push('../settings/profile')}>
-                  <Ionicons name="chevron-forward-outline" size={20} color={isDark ? '#aaa' : '#888'} />
-        </Pressable>
+      {/* Upgrade plan widget */}
+      
+      <TouchableOpacity>
+      <LinearGradient
+            colors={["#F09819", "#EDDE5D"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.premiumWidget, {borderColor: ui.border}]}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 24 }}>
+        <View style={{
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 5,
+          elevation: 5, // for Android
+        }}>
+          <Image source={require("../../assets/icons/crown.png")} style={{ width: 60, height: 60 }} />
         </View>
-        <View style={styles.row}>
-          <View style={{flexDirection: 'row'}}>
-            <Ionicons name="lock-closed-outline" size={20} color={isDark ? '#ff6b00' : '#666'} style={{ marginRight: 8 }} />
-            <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Privacy</Text>
+          <View style={{ gap: 12 }}>
+            <Text style={[styles.premiumLabel, { color: ui.text }]}>Upgrade Your Plan</Text>
+            <Text style={[styles.premiumSubLabel, { color: ui.text, width: "70%" }]}>Enjoy exclusive tools and personalized insights on your journey!</Text>
           </View>
-        <Pressable onPress={() => router.push('../settings/privacy')}>
-                  <Ionicons name="chevron-forward-outline" size={20} color={isDark ? '#aaa' : '#888'} />
-        </Pressable>
-        </View>
-        <View style={styles.row}>
-          <View style={{flexDirection: 'row'}}>
-            <Ionicons name="key-outline" size={20} color={isDark ? '#ff6b00' : '#666'} style={{ marginRight: 8 }} />
-            <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Security & Permissions</Text>
-          </View>
-        <Pressable onPress={() => router.push('../settings/security')}>
-                  <Ionicons name="chevron-forward-outline" size={20} color={isDark ? '#aaa' : '#888'} />
-        </Pressable>
-        </View>
+       </View>
+      </LinearGradient>
+      </TouchableOpacity>
 
-        {/* --- CONTENT AND DISPLAY --- */}
-        <Text style={[styles.sectionHeader, { color: isDark ? "#aaa" : "#666" }]}>Content & Display</Text>
+      {/* --- Account --- */}
+      <Text style={[styles.sectionHeader, { color: ui.text }]}>Account</Text>
+      {renderRow("person-outline", "Profile", "Update your display name and profile info", () => router.push("../settings/profile"))}
+      {renderRow("lock-closed-outline", "Privacy", "Control what info is visible to others", () => router.push("../settings/privacy"))}
+      {renderRow("key-outline", "Security & Permissions", "Manage passwords and app permissions", () => router.push("../settings/security"))}
 
-        <View style={styles.row}>
-          <View style={{flexDirection: 'row'}}>
-            <Ionicons name="notifications-outline" size={20} color={isDark ? '#ff6b00' : '#666'} style={{ marginRight: 8 }} />
-            <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Notifications</Text>
-          </View>
-        <Pressable onPress={() => router.push('../settings/notifications')}>
-                  <Ionicons name="chevron-forward-outline" size={20} color={isDark ? '#aaa' : '#888'} />
-        </Pressable>
-        </View>
+      {/* --- Content & Display --- */}
+      <Text style={[styles.sectionHeader, { color: ui.text }]}>Content & Display</Text>
+      {renderRow("notifications-outline", "Notifications", "Manage which notifications you want to receive", () => router.push("../settings/notifications"))}
+      {renderRow("trophy-outline", "Goals", "Set your fitness and nutrition goals", () => router.push("../settings/goals"))}
+      {renderRow("swap-horizontal-outline", "Units", "Choose your preferred measurement units", () => router.push("../settings/units"))}
+      {renderRow("language-outline", "Language", "Change the language used in the app", () => router.push("../settings/language"))}
+      {renderRow("moon-outline", "Theme", "Switch between light and dark modes", () => router.push("../settings/theme"))}
 
-        <View style={styles.row}>
-          <View style={{flexDirection: 'row'}}>
-            <Ionicons name="trophy-outline" size={20} color={isDark ? '#ff6b00' : '#666'} style={{ marginRight: 8 }} />
-            <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Goals</Text>
-          </View>
-        <Pressable onPress={() => router.push('../settings/goals')}>
-                  <Ionicons name="chevron-forward-outline" size={20} color={isDark ? '#aaa' : '#888'} />
-        </Pressable>
-        </View>
+      {/* --- Cache --- */}
+      <Text style={[styles.sectionHeader, { color: ui.text }]}>Cache</Text>
+      {renderRow("trash-outline", "Clear data", "Delete all local app data and reset state", handleClearData, {})}
 
-        <View style={styles.row}>
-          <View style={{flexDirection: 'row'}}>
-            <Ionicons name="swap-horizontal-outline" size={20} color={isDark ? '#ff6b00' : '#666'} style={{ marginRight: 8 }} />
-            <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Units</Text>
-          </View>
-        <Pressable onPress={() => router.push('../settings/goals')}>
-                  <Ionicons name="chevron-forward-outline" size={20} color={isDark ? '#aaa' : '#888'} />
-        </Pressable>
-        </View>
+      {/* --- Support & About --- */}
+      <Text style={[styles.sectionHeader, { color: ui.text }]}>Support & About</Text>
+      {renderRow("flag-outline", "Report a problem", "Something not working? Let us know", () => router.push("../settings/report"))}
+      {renderRow("document-text-outline", "Terms & Policies", "Review our policies and terms of use", () => router.push("../settings/tos"))}
+      {renderRow("chatbox-ellipses-outline", "FAQ", "Find answers to common questions", () => router.push("../settings/faq"))}
 
-        <View style={styles.row}>
-          <View style={{flexDirection: 'row'}}>
-            <Ionicons name="language-outline" size={20} color={isDark ? '#ff6b00' : '#666'} style={{ marginRight: 8 }} />
-            <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Language</Text>
-          </View>
-        <Pressable onPress={() => router.push('../settings/goals')}>
-                  <Ionicons name="chevron-forward-outline" size={20} color={isDark ? '#aaa' : '#888'} />
-        </Pressable>
-        </View>
+      {/* --- Login --- */}
+      <Text style={[styles.sectionHeader, { color: ui.text }]}>Login</Text>
+      {renderRow("exit-outline", "Log out", "Sign out of your account", handleLogout, {})}
 
-        <View style={styles.row}>
-          <View style={{flexDirection: 'row'}}>
-            <Ionicons name="moon-outline" size={20} color={isDark ? '#ff6b00' : '#666'} style={{ marginRight: 8 }} />
-            <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Dark Mode</Text>
-          </View>
-          <Switch value={isDark} onValueChange={toggleScheme} />
-        </View>
-
-        {/* --- CACHE --- */}
-        <Text style={[styles.sectionHeader, { color: isDark ? "#aaa" : "#666" }]}>Cache</Text>
-
-        <TouchableOpacity style={styles.clearButton} onPress={handleClearData}>
-          <Text style={styles.clearText}>Clear Data</Text>
-        </TouchableOpacity>
-
-
-
-
-        {/* --- SUPPORT & ABOUT --- */}
-        <Text style={[styles.sectionHeader, { color: isDark ? "#aaa" : "#666" }]}>Support & About</Text>
-        {/*Report a problem*/}
-        <View style={styles.row}>
-          <View style={{flexDirection: 'row'}}>
-            <Ionicons name="flag-outline" size={20} color={isDark ? '#ff6b00' : '#666'} style={{ marginRight: 8 }} />
-            <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Report a problem</Text>
-          </View>
-        <Pressable onPress={() => router.push('../settings/report')}>
-                  <Ionicons name="chevron-forward-outline" size={20} color={isDark ? '#aaa' : '#888'} />
-        </Pressable>
-        </View>
-        {/*Terms and Policies*/}
-        <View style={styles.row}>
-          <View style={{flexDirection: 'row'}}>
-            <Ionicons name="document-text-outline" size={20} color={isDark ? '#ff6b00' : '#666'} style={{ marginRight: 8 }} />
-            <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>Terms and Policies</Text>
-          </View>
-        <Pressable onPress={() => router.push('../settings/tos')}>
-                  <Ionicons name="chevron-forward-outline" size={20} color={isDark ? '#aaa' : '#888'} />
-        </Pressable>
-        </View>
-        {/*FAQ*/}
-        <View style={styles.row}>
-          <View style={{flexDirection: 'row'}}>
-            <Ionicons name="chatbox-ellipses-outline" size={20} color={isDark ? '#ff6b00' : '#666'} style={{ marginRight: 8 }} />
-            <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>FAQ</Text>
-          </View>
-        <Pressable onPress={() => router.push('../settings/faq')}>
-                  <Ionicons name="chevron-forward-outline" size={20} color={isDark ? '#aaa' : '#888'} />
-        </Pressable>
-        </View>
-
-        {/* --- LOG OUT --- */}
-        <Text style={[styles.sectionHeader, { color: isDark ? "#aaa" : "#666" }]}>Login</Text>
-        <TouchableOpacity style={styles.clearButton} onPress={handleLogout}>
-          <Text style={styles.clearText}>Log Out</Text>
-        </TouchableOpacity>
-
-        {/* --- APP VERSION --- */}
-        <Text style={[styles.version, { color: isDark ? "#aaa" : "#888" }]}>App Version: 1.0.0</Text>
-      </ScrollView>
-    </TouchableWithoutFeedback> 
-    </SafeAreaView>
+      {/* --- Version --- */}
+      <Text style={[styles.version, { color: ui.text }]}>App Version: 1.0.0</Text>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   title: {
     fontSize: 28,
     fontWeight: "700",
+    alignContent: "center",
+    textAlign: "center",
   },
   sectionHeader: {
     fontSize: 16,
@@ -213,37 +171,51 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   row: {
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: "space-between",
+    borderWidth: 1,
+    borderRadius: 8,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    marginVertical: 4,
+  },
+  rowLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  icon: {
+    marginRight: 12,
   },
   label: {
     fontSize: 16,
     fontWeight: "500",
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 8,
-    width: 100,
-    textAlign: "center",
-  },
-  clearButton: {
-    marginTop: 20,
-    backgroundColor: "#f44336",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  clearText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
+  subLabel: {
+    fontSize: 12,
+    marginTop: 2,
   },
   version: {
     marginTop: 40,
-    marginBottom: 100,
     textAlign: "center",
+  },
+  premiumWidget: {
+    padding: 16,
+    paddingVertical: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  premiumLabel: {
+    fontSize: 24,
+    fontWeight: "500",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
+  },
+  premiumSubLabel: {
+    fontSize: 14,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
 });

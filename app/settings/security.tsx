@@ -1,11 +1,13 @@
 // app/settings/security.tsx
-import { useThemeContext } from "@/context/ThemeContext";
+import BackButton from "@/components/BackButton";
+import Header from "@/components/Header";
+import ScreenWrapper from "@/components/ScreenWrapper";
+import { useTheme } from "@/theme/ThemeProvider";
 import React, { useState } from "react";
-import { Platform, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Platform, StyleSheet, Switch, Text, View } from "react-native";
 
 export default function SecurityScreen() {
-  const { scheme } = useThemeContext();
-  const isDark = scheme === "dark";
+  const { ui } = useTheme();
 
   // Dummy state for security toggles
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
@@ -14,16 +16,16 @@ export default function SecurityScreen() {
   const [cameraPermission, setCameraPermission] = useState(false);
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}>
-      <Text style={[styles.header, { color: isDark ? "#fff" : "#000" }]}>
-        Security & Permissions
-      </Text>
-
-      <Text style={[styles.subHeader, { color: isDark ? "#fff" : "#000" }]}>
+    <ScreenWrapper>
+      <Header
+        leftIcon={<BackButton />}
+        title="Security & Permissions"
+      />
+      <Text style={[styles.subHeader, { color: ui.text }]}>
         Security Settings
       </Text>
-      <View style={[styles.row, { borderBottomColor: isDark ? "#444" : "#ccc" }]}>
-        <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+      <View style={[styles.row, { borderBottomColor: ui.border }]}>
+        <Text style={[styles.label, { color: ui.text }]}>
           Two-Factor Authentication
         </Text>
         <Switch
@@ -34,8 +36,8 @@ export default function SecurityScreen() {
         />
       </View>
 
-      <View style={[styles.row, { borderBottomColor: isDark ? "#444" : "#ccc" }]}>
-        <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+      <View style={[styles.row, { borderBottomColor: ui.border }]}>
+        <Text style={[styles.label, { color: ui.text }]}>
           Biometric Unlock
         </Text>
         <Switch
@@ -46,11 +48,11 @@ export default function SecurityScreen() {
         />
       </View>
 
-      <Text style={[styles.subHeader, { color: isDark ? "#fff" : "#000", marginTop: 24 }]}>
+      <Text style={[styles.subHeader, { color: ui.text, marginTop: 24 }]}>
         App Permissions
       </Text>
-      <View style={[styles.row, { borderBottomColor: isDark ? "#444" : "#ccc" }]}>
-        <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+      <View style={[styles.row, { borderBottomColor: ui.border }]}>
+        <Text style={[styles.label, { color: ui.text }]}>
           Location Access
         </Text>
         <Switch
@@ -61,8 +63,8 @@ export default function SecurityScreen() {
         />
       </View>
 
-      <View style={[styles.row, { borderBottomColor: isDark ? "#444" : "#ccc" }]}>
-        <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+      <View style={[styles.row, { borderBottomColor: ui.border }]}>
+        <Text style={[styles.label, { color: ui.text }]}>
           Camera Access
         </Text>
         <Switch
@@ -73,10 +75,10 @@ export default function SecurityScreen() {
         />
       </View>
 
-      <Text style={[styles.note, { color: isDark ? "#888" : "#666" }]}>
+      <Text style={[styles.note, { color: ui.textMuted }]}>
         Manage your security preferences and app permissions.
       </Text>
-    </ScrollView>
+    </ScreenWrapper>
   );
 }
 

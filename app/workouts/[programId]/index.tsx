@@ -1,17 +1,23 @@
 // app/(tabs)/workouts/[programId]/index.tsx
-import { useThemeContext } from "@/context/ThemeContext";
+
+import BackButton from "@/components/BackButton";
+import Header from "@/components/Header";
+import ScreenWrapper from "@/components/ScreenWrapper";
 import { supabase } from "@/lib/supabase";
+import { useTheme } from "@/theme/ThemeProvider";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Pressable,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
+import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
 
 type WorkoutTemplate = {
   id: number;
@@ -19,156 +25,217 @@ type WorkoutTemplate = {
   order_index: number;
 };
 
-export default function ProgramDetailScreen() {
-  const { scheme } = useThemeContext();
-  const isDark = scheme === "dark";
-  const colors = {
-    background: isDark ? "#000" : "#fff",
-    card: isDark ? "#1e1e1e" : "#f2f2f2",
-    text: isDark ? "#fff" : "#000",
-    subText: isDark ? "#aaa" : "#888",
-    accent: "#ff6b00",
-  };
+// Simple UUID v4 validation (basic)
+const isValidUuid = (id: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 
+export default function ProgramDetailScreen() {
+  const { ui } = useTheme();
   const { programId } = useLocalSearchParams<{ programId?: string }>();
   const router = useRouter();
 
-  const progNum = programId ? parseInt(programId, 10) : NaN;
-  if (isNaN(progNum)) return null;
-
   const [workouts, setWorkouts] = useState<WorkoutTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [programName, setProgramName] = useState<string>("");
+
+  const swipeableRefs = useRef<Map<number, Swipeable>>(new Map());
 
   useEffect(() => {
-    const fetchWorkouts = async () => {
+    const fetchData = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("workouttemplate")
-        .select("id, name, order_index")
-        .eq("program_id", progNum)
-        .order("order_index", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching workouts:", error.message);
-        setWorkouts([]);
-      } else {
-        setWorkouts((data as WorkoutTemplate[]) || []);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        router.replace("/(auth)");
+        return;
       }
-      setLoading(false);
+
+      if (!programId || !isValidUuid(programId)) {
+        Alert.alert("Invalid Program ID", "The program ID is not valid.");
+        router.replace("/"); // or wherever you want to redirect
+        return;
+      }
+
+      try {
+        // Fetch program name
+        const { data: programData, error: programError } = await supabase
+          .from("programs")
+          .select("name")
+          .eq("id", programId)
+          .single();
+
+        if (programError) throw programError;
+        if (programData?.name) setProgramName(programData.name);
+
+        // Fetch workouts
+        const { data: workoutData, error: workoutError } = await supabase
+          .from("workouts")
+          .select("id, name, order_index")
+          .eq("program_id", programId)
+          .order("order_index", { ascending: true });
+
+        if (workoutError) throw workoutError;
+        setWorkouts((workoutData as WorkoutTemplate[]) || []);
+      } catch (error: any) {
+        Alert.alert("Error fetching data", error.message || "Unknown error");
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchWorkouts();
-  }, [progNum]);
+
+    fetchData();
+  }, [programId, router]);
+
+  const deleteWorkout = async (workoutId: number) => {
+    try {
+      const { error } = await supabase
+        .from("workouts")
+        .delete()
+        .eq("id", workoutId);
+      if (error) throw error;
+      setWorkouts((prev) => prev.filter((w) => w.id !== workoutId));
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Could not delete workout.");
+    }
+  };
+
+  const renderRightActions = (_: any, item: WorkoutTemplate) => (
+    <Pressable
+      style={[styles.deleteButton, { backgroundColor: "#dc3545" }]}
+      onPress={() => {
+        const ref = swipeableRefs.current.get(item.id);
+        ref?.close();
+        Alert.alert(
+          "Delete Workout",
+          `Are you sure you want to delete "${item.name}"?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: () => deleteWorkout(item.id),
+            },
+          ]
+        );
+      }}
+    >
+      <Ionicons name="trash-outline" size={24} color="#fff" />
+    </Pressable>
+  );
+
+  const renderItem = ({ item }: { item: WorkoutTemplate }) => (
+    <Swipeable
+      ref={(ref) => {
+        if (ref) swipeableRefs.current.set(item.id, ref);
+      }}
+      friction={2}
+      rightThreshold={40}
+      renderRightActions={(progress) => renderRightActions(progress, item)}
+      onSwipeableWillOpen={() => {
+        swipeableRefs.current.forEach((ref, key) => {
+          if (key !== item.id) ref.close();
+        });
+      }}
+    >
+      <Pressable
+        style={[styles.card]}
+        onPress={() => router.push(`/workouts/${programId}/${item.id}`)}
+      >
+        <View style={styles.cardRow}>
+          <View style={[styles.iconBox, { backgroundColor: "#6C5CE7" }]}>
+            <Ionicons name="barbell-outline" size={24} color="#fff" />
+          </View>
+          <Text style={[styles.cardTitle, { color: ui.text }]}>{item.name}</Text>
+        </View>
+      </Pressable>
+    </Swipeable>
+  );
+
+  const renderHeader = () => (
+    <Pressable
+      style={[styles.card]}
+      onPress={() => router.push(`/workouts/${programId}/new-workout`)}
+    >
+      <View style={styles.cardRow}>
+        <View style={[styles.iconBox, { backgroundColor: ui.primary }]}>
+          <Ionicons name="add" size={28} color="#fff" />
+        </View>
+        <Text style={[styles.cardTitle, { color: ui.text }]}>Create workout</Text>
+      </View>
+    </Pressable>
+  );
 
   if (loading) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={[styles.centered, { backgroundColor: ui.bgDark }]}>
+        <ActivityIndicator size="large" color={ui.primary} />
       </View>
     );
   }
 
-  const renderItem = ({ item }: { item: WorkoutTemplate }) => (
-    <Pressable
-      style={[styles.card, { backgroundColor: colors.card }]}
-      onPress={() => router.push(`/workouts/${programId}/${item.id}`)}
-    >
-      <Text style={[styles.cardTitle, { color: colors.text }]}>
-        {item.name}
-      </Text>
-    </Pressable>
-  );
-
-  const ListFooter = () => (
-    <Pressable
-      style={[styles.addButton, { backgroundColor: colors.accent }]}
-      onPress={() => router.push(`/workouts/${programId}/new-workout`)}
-    >
-      <Text style={[styles.addButtonText, { color: "#fff" }]}>
-        + Add Workout
-      </Text>
-    </Pressable>
-  );
-
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
-      <Text style={[styles.header, { color: colors.text }]}>Workouts</Text>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ScreenWrapper scroll={false}>
+        <Header leftIcon={<BackButton />} title={programName} />
 
-      {workouts.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: colors.subText }]}>
-            No workouts in this program.
-          </Text>
-          <Pressable
-            style={[styles.addButton, { backgroundColor: colors.accent }]}
-            onPress={() => router.push(`/workouts/${programId}/new-workout`)}
-          >
-            <Text style={[styles.addButtonText, { color: "#fff" }]}>
-              + Add Workout
+        {workouts.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: ui.textMuted }]}>
+              No workouts in this program.
             </Text>
-          </Pressable>
-        </View>
-      ) : (
-        <FlatList
-          data={workouts}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          ListFooterComponent={ListFooter}
-        />
-      )}
-    </SafeAreaView>
+            {renderHeader()}
+          </View>
+        ) : (
+          <FlatList
+            data={workouts}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderItem}
+            ListHeaderComponent={renderHeader}
+          />
+        )}
+      </ScreenWrapper>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: {
-    fontSize: 24,
-    fontWeight: "700",
-    marginTop: 16,
-    marginHorizontal: 16,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
   card: {
     borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    paddingVertical: 8,
+  },
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: "600",
-  },
-  addButton: {
-    marginHorizontal: 16,
-    marginVertical: 24,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
+    marginLeft: 12,
+    flex: 1,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
-    marginTop: 40,
+    padding: 24,
   },
   emptyText: {
     fontSize: 16,
     marginBottom: 16,
     textAlign: "center",
+  },
+  deleteButton: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    marginVertical: 8,
+    borderRadius: 12,
   },
 });

@@ -1,41 +1,34 @@
 // app/(tabs)/workouts/[programId]/new-workout.tsx
-import { useThemeContext } from "@/context/ThemeContext";
+import ScreenWrapper from "@/components/ScreenWrapper";
 import { supabase } from "@/lib/supabase";
+import { useTheme } from "@/theme/ThemeProvider";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from "react-native";
 
 export default function NewWorkoutScreen() {
-  const { scheme } = useThemeContext();
-  const isDark = scheme === "dark";
-  const colors = {
-    background: isDark ? "#000" : "#fff",
-    card: isDark ? "#1e1e1e" : "#f2f2f2",
-    text: isDark ? "#fff" : "#000",
-    subText: isDark ? "#aaa" : "#888",
-    accent: "#ff6b00",
-  };
 
+  const { ui } = useTheme();
+  
   const { programId } = useLocalSearchParams<{ programId?: string }>();
   const router = useRouter();
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Guard: ensure programId is a valid integer
-  const progNum = programId ? parseInt(programId, 10) : NaN;
-  if (isNaN(progNum)) {
-    return null;
+  if (!programId) {
+  return null;
   }
+
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -56,11 +49,11 @@ export default function NewWorkoutScreen() {
 
     // Insert into lowercase table name
     const { error: insertError } = await supabase
-      .from("workouttemplate")
+      .from("workouts")
       .insert([
         {
           name: name.trim(),
-          program_id: progNum,
+          program_id: programId,
           order_index: 1, // or calculate based on existing count
         },
       ]);
@@ -73,24 +66,24 @@ export default function NewWorkoutScreen() {
     }
 
     // Navigate back to program detail
-    router.replace(`/workouts/${progNum}`);
+    router.replace(`/workouts/${programId}`);
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <ScreenWrapper>
       <KeyboardAvoidingView
         behavior={Platform.select({ ios: "padding", android: undefined })}
         style={styles.innerContainer}
       >
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <Text style={[styles.title, { color: colors.text }]}>New Workout</Text>
+        <View style={[styles.card, { backgroundColor: ui.bg }]}>
+          <Text style={[styles.title, { color: ui.text }]}>New Workout</Text>
 
           <View style={styles.field}>
-            <Text style={[styles.label, { color: colors.subText }]}>Workout Name</Text>
+            <Text style={[styles.label, { color: ui.textMuted }]}>Workout Name</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: isDark ? "#121212" : "#fff", color: colors.text }]}
+              style={[styles.input, { backgroundColor: ui.bg }]}
               placeholder="e.g. Push Day"
-              placeholderTextColor={colors.subText}
+              placeholderTextColor={ui.textMuted}
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
@@ -98,7 +91,7 @@ export default function NewWorkoutScreen() {
           </View>
 
           <Pressable
-            style={[styles.button, { backgroundColor: colors.accent }, loading && styles.buttonDisabled]}
+            style={[styles.button, { backgroundColor: ui.primary }, loading && styles.buttonDisabled]}
             onPress={handleCreate}
             disabled={loading}
           >
@@ -110,11 +103,11 @@ export default function NewWorkoutScreen() {
           </Pressable>
 
           <Pressable onPress={() => router.back()} style={styles.cancelContainer}>
-            <Text style={[styles.cancelText, { color: colors.accent }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: ui.primary }]}>Cancel</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenWrapper>
   );
 }
 

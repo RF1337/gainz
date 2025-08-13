@@ -1,67 +1,80 @@
-// components/AvatarUploader.tsx
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/theme/ThemeProvider';
+import { decode } from 'base64-arraybuffer';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import AvatarIcon from './AvatarIcon';
 
 interface Props {
-  bucket: string; // e.g. "profile_avatars"
-  folderPath: string; // e.g. the user’s ID or “public/…”
+  bucket: string;      // e.g., "user-avatars"
+  folderPath: string;  // e.g., user ID, no leading slash
   onUploaded: (fullPath: string) => void;
   size?: number;
 }
 
-export default function AvatarUploader({ bucket, folderPath, onUploaded, size = 100 }: Props) {
+export default function AvatarUploader({
+  bucket,
+  folderPath,
+  onUploaded,
+  size = 100,
+}: Props) {
   const [uploading, setUploading] = useState(false);
   const [localUri, setLocalUri] = useState<string | null>(null);
+  const { ui } = useTheme();
 
   const pickAndUpload = async () => {
     try {
-      // 1. Ask for permission (if needed)
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert('Permission required', 'Camera roll permission is needed to pick an image.');
+      const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!granted) {
+        Alert.alert(
+          'Permission required',
+          'Camera roll permission is needed to pick an image.'
+        );
         return;
       }
 
-      // 2. Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
+        base64: true,
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 0.8,
       });
 
-      if (result.canceled) {
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const asset = result.assets[0];
+
+      if (!asset.base64) {
+        Alert.alert('Error', 'Failed to retrieve image data.');
         return;
       }
 
-      // 3. We have result.assets[0].uri (e.g. "file:///…/IMG_1234.jpg")
-      setLocalUri(result.assets[0].uri);
-
-      // 4. Convert URI → Blob (or ArrayBuffer)
+      setLocalUri(asset.uri);
       setUploading(true);
-      const response = await fetch(result.assets[0].uri);
-      const blob = await response.blob();
 
-      // 5. Derive a filename & path in your bucket
-      //    For example: `${folderPath}/${Date.now()}.jpg`
-      const ext = result.assets[0].uri.split('.').pop() || 'jpg';
+      const ext = asset.uri.split('.').pop() || 'jpg';
       const fileName = `${Date.now()}.${ext}`;
-      const pathInBucket = `${folderPath}/${fileName}`;
+      const fullPath = `${folderPath}/${fileName}`;
 
-      // 6. Upload to Supabase Storage
-      const { data, error: uploadError } = await supabase.storage
+      const { data, error } = await supabase.storage
         .from(bucket)
-        .upload(pathInBucket, blob, {
-          contentType: blob.type,
+        .upload(fullPath, decode(asset.base64), {
+          contentType: asset.mimeType || `image/${ext}`,
         });
 
-      if (uploadError) throw uploadError;
+      if (error) throw error;
 
-      // 7. Success! Return the full path to parent
       onUploaded(data.path);
     } catch (err: any) {
-      console.log('Upload error:', err.message || err);
+      console.error('Upload error:', err.message || err);
       Alert.alert('Upload failed', err.message || 'Unknown error');
     } finally {
       setUploading(false);
@@ -70,24 +83,11 @@ export default function AvatarUploader({ bucket, folderPath, onUploaded, size = 
 
   return (
     <View style={styles.container}>
-      {/*  If localUri is set, preview it; otherwise show placeholder */}
-      {localUri ? (
-        <Image
-          source={{ uri: localUri }}
-          style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}
-        />
-      ) : (
-        <View
-          style={[
-            styles.avatarPlaceholder,
-            { width: size, height: size, borderRadius: size / 2 },
-          ]}
-        >
-          <Text style={styles.plus}>＋</Text>
-        </View>
-      )}
+      <View style={styles.avatar}>
+        <AvatarIcon size={100} />
+      </View>
 
-      <Pressable
+      <TouchableOpacity
         style={[styles.button, uploading && styles.buttonDisabled]}
         onPress={pickAndUpload}
         disabled={uploading}
@@ -95,9 +95,9 @@ export default function AvatarUploader({ bucket, folderPath, onUploaded, size = 
         {uploading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Upload</Text>
+          <Text style={[styles.buttonText, { color: ui.text }]}>Upload photo</Text>
         )}
-      </Pressable>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -108,30 +108,19 @@ const styles = StyleSheet.create({
   },
   avatar: {
     marginBottom: 12,
-    backgroundColor: '#ccc',
   },
-  avatarPlaceholder: {
-    marginBottom: 12,
-    backgroundColor: '#444',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  plus: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  button: {
-    backgroundColor: '#ff6b00',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+button: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    marginBottom: 10,
+    borderColor: '#333',
+    borderWidth: 1,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
-    fontWeight: '600',
+    fontSize: 14,
   },
 });

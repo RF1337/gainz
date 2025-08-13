@@ -1,11 +1,13 @@
 // app/settings/privacy.tsx
-import { useThemeContext } from "@/context/ThemeContext";
+import BackButton from "@/components/BackButton";
+import Header from "@/components/Header";
+import ScreenWrapper from "@/components/ScreenWrapper";
+import { useTheme } from "@/theme/ThemeProvider";
 import React, { useState } from "react";
-import { Platform, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Platform, StyleSheet, Switch, Text, View } from "react-native";
 
 export default function PrivacyScreen() {
-  const { scheme } = useThemeContext();
-  const isDark = scheme === "dark";
+  const { ui } = useTheme();
 
   // Dummy state for privacy toggles
   const [privateProfile, setPrivateProfile] = useState(false);
@@ -13,13 +15,13 @@ export default function PrivacyScreen() {
   const [adPersonalization, setAdPersonalization] = useState(false);
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}>
-      <Text style={[styles.header, { color: isDark ? "#fff" : "#000" }]}>
-        Privacy Settings
-      </Text>
-
-      <View style={[styles.row, { borderBottomColor: isDark ? "#444" : "#ccc" }]}>
-        <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+    <ScreenWrapper>
+      <Header
+        leftIcon={<BackButton />}
+        title="Privacy"
+      />
+      <View style={[styles.row, { borderBottomColor: ui.border }]}>
+        <Text style={[styles.label, { color: ui.text }]}>
           Private Profile
         </Text>
         <Switch
@@ -30,8 +32,8 @@ export default function PrivacyScreen() {
         />
       </View>
 
-      <View style={[styles.row, { borderBottomColor: isDark ? "#444" : "#ccc" }]}>
-        <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+      <View style={[styles.row, { borderBottomColor: ui.border }]}>
+        <Text style={[styles.label, { color: ui.text }]}>
           Share Usage Data
         </Text>
         <Switch
@@ -42,8 +44,8 @@ export default function PrivacyScreen() {
         />
       </View>
 
-      <View style={[styles.row, { borderBottomColor: isDark ? "#444" : "#ccc" }]}>
-        <Text style={[styles.label, { color: isDark ? "#fff" : "#000" }]}>
+      <View style={[styles.row, { borderBottomColor: ui.border }]}>
+        <Text style={[styles.label, { color: ui.text }]}>
           Ad Personalization
         </Text>
         <Switch
@@ -54,10 +56,10 @@ export default function PrivacyScreen() {
         />
       </View>
 
-      <Text style={[styles.note, { color: isDark ? "#888" : "#666" }]}>
+      <Text style={[styles.note, { color: ui.textMuted }]}>
         Adjust these privacy options to control visibility and data sharing.
       </Text>
-    </ScrollView>
+    </ScreenWrapper>
   );
 }
 

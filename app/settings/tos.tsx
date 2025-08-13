@@ -1,12 +1,20 @@
 // app/terms.tsx
+import BackButton from '@/components/BackButton';
+import Header from '@/components/Header';
+import ScreenWrapper from '@/components/ScreenWrapper';
+import { useTheme } from '@/theme/ThemeProvider';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function TermsScreen() {
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.header}>Terms of Service & Privacy Policy</Text>
+  const {ui} = useTheme();
 
+  return (
+<ScreenWrapper>
+    <Header
+      leftIcon={<BackButton />}
+      title="Terms of Service"
+    />
       {/* Terms of Service Section */}
       <View style={styles.section}>
         <Text style={styles.sectionHeader}>1. Terms of Service</Text>
@@ -103,7 +111,7 @@ export default function TermsScreen() {
       <Text style={styles.footer}>
         © {new Date().getFullYear()} Gainz. All rights reserved.
       </Text>
-    </ScrollView>
+</ScreenWrapper>
   );
 }
 

@@ -20,7 +20,7 @@ export default function AnimatedTabIcon({
   useEffect(() => {
     Animated.parallel([
       Animated.spring(scale, {
-        toValue: isFocused ? 1.15 : 1,
+        toValue: isFocused ? 1.05 : 1,
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {

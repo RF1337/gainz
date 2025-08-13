@@ -55,7 +55,7 @@ export default function FabMenu({ onClose }: { onClose: () => void }) {
               ]}
             >
               <TouchableOpacity onPress={() => {
-                router.push(pos.route);
+                router.push(pos.route as any);
                 onClose(); // Close menu after navigation
               }}>
                 <Ionicons name={pos.icon as any} size={20} color="#fff" />
@@ -69,11 +69,11 @@ export default function FabMenu({ onClose }: { onClose: () => void }) {
 }
 
 const buttonPositions = [
-  { x: -100, y: -75, icon: 'barcode-outline', route: '/(diet)/new' },
+  { x: -100, y: -75, icon: 'barcode-outline', route: '/scanner/camera' },
   { x: -55, y: -115, icon: 'barbell-outline', route: '/workouts' },
-  { x: 0, y: -140, icon: 'body-outline', route: '/(measurements)/new' },
+  { x: 0, y: -140, icon: 'body-outline', route: '/progress/measurements' },
   { x: 55, y: -115, icon: 'water-outline', route: '/(water)/new' },
-  { x: 100, y: -75, icon: 'scale-outline', route: '/(weight)/new' },
+  { x: 100, y: -75, icon: 'scale-outline', route: '/progress/weight/new' },
 ];
 
 const styles = StyleSheet.create({
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#ff6b00',
+    backgroundColor: "rgba(0, 128, 255, 1)",
     justifyContent: 'center',
     alignItems: 'center',
   },

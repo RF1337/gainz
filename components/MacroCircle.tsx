@@ -1,7 +1,7 @@
-import { useThemeContext } from '@/context/ThemeContext';
+import { useTheme } from '@/theme/ThemeProvider';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, G } from 'react-native-svg';
+import { PieChart } from 'react-native-gifted-charts';
 
 type Props = {
   protein: number;
@@ -11,75 +11,59 @@ type Props = {
 };
 
 export default function MacroCircle({ protein, carbs, fat, size = 120 }: Props) {
-  const { scheme } = useThemeContext();
-  const isDark = scheme === 'dark';
-
-  const colors = {
-    background: isDark ? '#000' : '#fff',
-    card: isDark ? '#1e1e1e' : '#f2f2f2',
-    text: isDark ? '#fff' : '#000',
-    subText: isDark ? '#aaa' : '#888',
-  };
+  const { ui } = useTheme();
 
   const total = protein + carbs + fat;
-  const strokeWidth = 18;
-  const radius = (size - strokeWidth) / 2;
-  const cx = size / 2;
-  const cy = size / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  const proteinLength = (protein / total) * circumference;
-  const carbsLength = (carbs / total) * circumference;
-  const fatLength = (fat / total) * circumference;
+    
+  const pieData = [
+        {value: protein, color: '#ff595e'},
+        {value: carbs, color: '#1982c4'},
+        {value: fat, color: '#ffca3a'},
+    ];
+  
+  const renderLegend = (text, color) => {
+        return (
+          <View style={{flexDirection: 'row', marginBottom: 12}}>
+            <View
+              style={{
+                height: 18,
+                width: 18,
+                marginRight: 10,
+                borderRadius: 4,
+                backgroundColor: color || ui.text,
+              }}
+            />
+            <Text style={{color: ui.text, fontSize: 16}}>{text || ''}</Text>
+          </View>
+        );
+      };
 
   return (
     <View style={styles.wrapper}>
-      <Svg width={size} height={size}>
-        <G rotation={-90} origin={`${cx}, ${cy}`}>
-          {/* Protein */}
-          <Circle
-            stroke="#ff595e"
-            fill="none"
-            cx={cx}
-            cy={cy}
-            r={radius}
-            strokeWidth={strokeWidth}
-            strokeDasharray={`${proteinLength}, ${circumference}`}
-            strokeDashoffset={0}
-            strokeLinecap="round"
-          />
-
-          {/* Carbs */}
-          <Circle
-            stroke="#1982c4"
-            fill="none"
-            cx={cx}
-            cy={cy}
-            r={radius}
-            strokeWidth={strokeWidth}
-            strokeDasharray={`${carbsLength}, ${circumference}`}
-            strokeDashoffset={-proteinLength}
-            strokeLinecap="round"
-          />
-
-          {/* Fat */}
-          <Circle
-            stroke="#ffca3a"
-            fill="none"
-            cx={cx}
-            cy={cy}
-            r={radius}
-            strokeWidth={strokeWidth}
-            strokeDasharray={`${fatLength}, ${circumference}`}
-            strokeDashoffset={-(proteinLength + carbsLength)}
-            strokeLinecap="round"
-          />
-        </G>
-      </Svg>
-      <View style={styles.centerText }>
-        <Text style={{ fontWeight: '600', fontSize: 16, color: colors.text }}>{protein + carbs + fat}g</Text>
-        <Text style={{ fontSize: 12, color: colors.subText }}>Total macros</Text>
-      </View>
+    <PieChart
+      data={pieData}
+      radius={60}
+      donut
+      innerRadius={40}
+      centerLabelComponent={() => {
+                return (
+                  <View>
+                    <Text style={{color: ui.text, fontSize: 24}}>{total}</Text>
+                    <Text style={{color: ui.textMuted, fontSize: 14}}>Total</Text>
+                  </View>
+                );
+              }}
+    />
+    <View
+              style={{
+                flexDirection: 'row',
+                gap: 8,
+                marginTop: 12,
+              }}>
+              {renderLegend('Protein', '#ff595e')}
+              {renderLegend('Carbs', '#1982c4')}
+              {renderLegend('Fat', '#ffca3a')}
+            </View>
     </View>
   );
 }
@@ -87,10 +71,6 @@ export default function MacroCircle({ protein, carbs, fat, size = 120 }: Props) 
 const styles = StyleSheet.create({
   wrapper: {
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  centerText: {
-    position: 'absolute',
     alignItems: 'center',
   },
 });
