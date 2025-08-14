@@ -156,6 +156,7 @@ const yAxisLabels = [79, 80, 81, 82, 83, 84, 85].map(val => ({
           endFillColor={ui.primary}
           endOpacity={0.0}
           curved
+          rulesColor={ui.bgLight}
           isAnimated
           animationDuration={2500}
           initialSpacing={0}
@@ -165,24 +166,7 @@ const yAxisLabels = [79, 80, 81, 82, 83, 84, 85].map(val => ({
           rulesType="solid"
           pointerConfig={{
             pointerColor: ui.primary,
-            pointerLabelComponent: items => {
-                return (
-                  <View
-                    style={{
-                      height: 120,
-                      width: 100,
-                      backgroundColor: '#282C3E',
-                      borderRadius: 4,
-                      justifyContent:'center',
-                      paddingLeft:16,
-                    }}>
-                    <Text style={{color: 'lightgray',fontSize:12}}>{2018}</Text>
-                    <Text style={{color: 'white', fontWeight:'bold'}}>{items[0].value}</Text>
-                    <Text style={{color: 'lightgray',fontSize:12,marginTop:12}}>{2019}</Text>
-                    <Text style={{color: 'white', fontWeight:'bold'}}>{items[1].value}</Text>
-                  </View>
-                );
-              },
+            radius: 6,
           }}
           />
         </>

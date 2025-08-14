@@ -47,12 +47,12 @@ export default function TabLayout() {
               position: 'absolute',
               borderTopColor: ui.bg,
               backgroundColor: ui.bg,
-              height: 70,
+              height: 85,
             },
             default: {
               borderTopWidth: 0,
               backgroundColor: ui.bg,
-              height: 70,
+              height: 85,
             },
           }),
         }}
@@ -124,27 +124,19 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   fabTab: {
-    top: -25,
-    width: 60,
-    height: 60,
+    top: 0,
+    width: 50,
+    height: 50,
     borderRadius: 30,
     backgroundColor: "rgba(0, 128, 255, 1)",
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: "hsla(0, 0%, 80%, 1.00)",  
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 2,
   },
   fabTabCenter: {
     position: 'absolute',
     bottom: 10,
     left: '50%',
-    transform: [{ translateX: -30 }], // Half of width (60/2) to center it
+    transform: [{ translateX: -25 }], // Half of width (60/2) to center it
     zIndex: 10,
   },
 });

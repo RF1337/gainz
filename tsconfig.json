@@ -11,7 +11,7 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts",
-    ".env.d.ts", "services/i18next.js"  ]
+    ".env.d.ts",
+    "services/i18next.js"
+  ]
 }

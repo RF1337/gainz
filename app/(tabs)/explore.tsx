@@ -10,6 +10,7 @@ import { default as React, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -185,6 +186,7 @@ export default function ExploreScreen() {
 
   return (
     <ScreenWrapper>
+      <View style={styles.header}>
       <View style={[styles.searchContainer, styles.cardShadow, { backgroundColor: ui.bg }]}>
         <Ionicons name="search-outline" size={20} color={ui.textMuted} />
         <TextInput
@@ -194,6 +196,10 @@ export default function ExploreScreen() {
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
+      </View>
+      <Pressable>
+        <Ionicons name="filter-outline" size={20} color={ui.textMuted} />
+      </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -224,11 +230,17 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 32 },
+  header: {
+    marginTop: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   searchContainer: {
+    width: "90%",
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 16,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 100,
   },
@@ -263,15 +275,7 @@ const styles = StyleSheet.create({
   trendingTitle: { fontSize: 18, fontWeight: "600" },
   trendingSubtitle: { fontSize: 14, marginTop: 4 },
   cardShadow: {
-    shadowColor: "hsla(0, 0%, 80%, 1.00)",  
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
 
-    elevation: 2,
   },
   categoryUnderline: {
   height: 2,

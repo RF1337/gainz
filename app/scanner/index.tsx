@@ -23,12 +23,25 @@ export default function FoodIndex() {
   const [recentFoods, setRecentFoods] = useState<any[]>([]);
 
 
-const [todayNutrition, setTodayNutrition] = useState({
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fat: 0,
-  });
+  type NutritionTotals = {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  vitaminC: number;
+  iron: number;
+  magnesium: number;
+};
+
+    const [todayNutrition, setTodayNutrition] = useState<NutritionTotals>({
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      vitaminC: 0,
+      iron: 0,
+      magnesium: 0,
+    });
 
  useEffect(() => {
     const fetchData = async () => {
@@ -41,12 +54,36 @@ const [todayNutrition, setTodayNutrition] = useState({
       }
 
       // Fetch recent food entries (limit 5)
+
+      
+    type FoodEntryWithFood = {
+      quantity: number;
+      foods: {
+        calories: number | null;
+        protein: number | null;
+        carbs: number | null;
+        fat: number | null;
+        vitamin_c: number | null;
+        iron: number | null;
+        magnesium: number | null;
+      } | null;
+    };
+
       const { data: recentData, error: recentError } = await supabase
-        .from("food_entries")
-        .select("product_name, calories, created_at")
-        .eq("user_id", user_id)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      .from('food_entries')
+      .select(`
+        quantity,
+        foods (
+          calories,
+          protein,
+          carbs,
+          fat,
+          vitamin_c,
+          iron,
+          magnesium
+        )
+      `)
+      .eq('user_id', user_id)
 
       if (recentError) {
         console.error("Error fetching food entries:", recentError.message);
@@ -58,27 +95,41 @@ const [todayNutrition, setTodayNutrition] = useState({
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const { data: todayData, error: todayError } = await supabase
-        .from("food_entries")
-        .select("calories, protein, carbs, fat, created_at")
-        .eq("user_id", user_id)
-        .gte("created_at", today.toISOString());
+      const { data, error } = await supabase
+      .from('food_entries')
+      .select(`
+        quantity,
+        foods (
+          calories,
+          protein,
+          carbs,
+          fat,
+          vitamin_c,
+          iron,
+          magnesium
+        )
+      `)
+      .eq("user_id", user_id)
+      .gte('created_at', today.toISOString()) as unknown as { data: FoodEntryWithFood[]; error: any };
 
-      if (todayError) {
-        console.error("Failed to fetch today's food entries:", todayError.message);
+      if (error) {
+        console.error("Failed to fetch today's food entries:", error.message);
         return;
       }
 
-      const totals = todayData.reduce(
-        (acc, entry) => {
-          acc.calories += entry.calories ?? 0;
-          acc.protein += entry.protein ?? 0;
-          acc.carbs += entry.carbs ?? 0;
-          acc.fat += entry.fat ?? 0;
-          return acc;
-        },
-        { calories: 0, protein: 0, carbs: 0, fat: 0 }
-      );
+    const totals = (data ?? []).reduce((acc, entry) => {
+      if (!entry.foods) return acc;
+
+      const factor = (entry.quantity ?? 0) / 100;
+      acc.calories += (entry.foods.calories ?? 0) * factor;
+      acc.protein  += (entry.foods.protein ?? 0) * factor;
+      acc.carbs    += (entry.foods.carbs ?? 0) * factor;
+      acc.fat      += (entry.foods.fat ?? 0) * factor;
+      acc.vitaminC += (entry.foods.vitamin_c ?? 0) * factor;
+      acc.iron     += (entry.foods.iron ?? 0) * factor;
+      acc.magnesium+= (entry.foods.magnesium ?? 0) * factor;
+      return acc;
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0, vitaminC: 0, iron: 0, magnesium: 0 });
 
       setTodayNutrition(totals);
     };

@@ -1,9 +1,10 @@
+import { Unit, UnitPicker } from '@/components/DropdownUnitPicker';
 import Header from '@/components/Header';
 import ScreenWrapper from '@/components/ScreenWrapper';
+import { useFavourite } from '@/hooks/useFavourite';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -16,25 +17,23 @@ const UNITS = [
 ];
 
 export default function DetailsScreen() {
-  const { product, barcode } = useLocalSearchParams();
+  const { barcode, product } = useLocalSearchParams();
+  const [userId, setUserId] = useState<string | null>(null);
   const { ui } = useTheme();
   const router = useRouter();
 
   const parsed = JSON.parse(product as string);
   const n = parsed.nutriments || {};
 
-  const [grams, setGrams] = useState('100');
-  const [unit, setUnit] = useState<'g'|'ml'|'oz'>('g');
+  const [selectedUnit, setSelectedUnit] = useState<Unit>('g');
+  const [amount, setAmount] = useState('100');
   const [loading, setLoading] = useState(false);
-  const [showUnitPicker, setShowUnitPicker] = useState(false);
-  const [isFavourite, setIsFavourite] = useState(false);
+  const [foodId, setFoodId] = useState<string | null>(null);
 
   const getUnitFullName = (shortUnit: string) => {
     const unitObj = UNITS.find(u => u.short === shortUnit);
     return unitObj ? unitObj.full : shortUnit;
   };
-
-  const handleFavourite = () => setIsFavourite(!isFavourite);
 
   // Tjek om OFF har data for en given unit (vi bruger et par "kernemakroer" som indikator)
   const offHasUnit = (u: string) => {
@@ -53,12 +52,35 @@ export default function DetailsScreen() {
     return opts.length > 0 ? opts : [UNITS[0]]; // fallback til 'g' hvis ingen fundet
   }, [n]);
 
-  // Hvis valgt unit ikke er gyldig for dette produkt, så vælg første gyldige
-  useEffect(() => {
-    if (!unitOptions.find(u => u.short === unit)) {
-      setUnit(unitOptions[0].short as 'g'|'ml'|'oz');
+
+useEffect(() => {
+  // Existing unit check
+  if (!unitOptions.find(u => u.short === selectedUnit)) {
+    setSelectedUnit(unitOptions[0].short as 'g' | 'ml' | 'oz');
+  }
+
+  // Get current user id
+  supabase.auth.getUser().then(({ data }) => {
+    if (data.user) {
+      setUserId(data.user.id);
     }
-  }, [unitOptions, unit]);
+  });
+}, [unitOptions, selectedUnit]);
+
+useEffect(() => {
+  if (!barcode) return;
+  supabase
+    .from('foods')
+    .select('id')
+    .eq('barcode', barcode)
+    .single()
+    .then(({ data }) => {
+      if (data) setFoodId(data.id);
+    });
+}, [barcode]);
+
+const { isFavourite, toggleFavourite } = useFavourite('food', foodId ?? '', userId ?? '');
+
 
   // Returner KUN værdier hvis de findes for *den valgte unit*
   const getValue = (nutrient: string, quantity: number, selectedUnit: string) => {
@@ -70,92 +92,114 @@ export default function DetailsScreen() {
   };
 
   const nutritionData = useMemo(() => {
-    const quantity = parseFloat(grams) || 0;
+    const quantity = parseFloat(amount) || 0;
     return {
-      calories: getValue('energy-kcal', quantity, unit),
-      protein: getValue('proteins', quantity, unit),
-      carbs: getValue('carbohydrates', quantity, unit),
-      fat: getValue('fat', quantity, unit),
-      saturated_fat: getValue('saturated-fat', quantity, unit),
-      sugar: getValue('sugars', quantity, unit),
-      salt: getValue('salt', quantity, unit),
-      sodium: getValue('sodium', quantity, unit),
-      vitamin_c: getValue('vitamin-c', quantity, unit),
-      vitamin_b12: getValue('vitamin-b12', quantity, unit),
-      vitamin_d: getValue('vitamin-d', quantity, unit),
-      vitamin_a: getValue('vitamin-a', quantity, unit),
-      iron: getValue('iron', quantity, unit),
-      magnesium: getValue('magnesium', quantity, unit),
-      calcium: getValue('calcium', quantity, unit),
-      potassium: getValue('potassium', quantity, unit),
-      zinc: getValue('zinc', quantity, unit),
+      calories: getValue('energy-kcal', quantity, selectedUnit),
+      protein: getValue('proteins', quantity, selectedUnit),
+      carbs: getValue('carbohydrates', quantity, selectedUnit),
+      fat: getValue('fat', quantity, selectedUnit),
+      saturated_fat: getValue('saturated-fat', quantity, selectedUnit),
+      sugar: getValue('sugars', quantity, selectedUnit),
+      salt: getValue('salt', quantity, selectedUnit),
+      sodium: getValue('sodium', quantity, selectedUnit),
+      vitamin_c: getValue('vitamin-c', quantity, selectedUnit),
+      vitamin_b12: getValue('vitamin-b12', quantity, selectedUnit),
+      vitamin_d: getValue('vitamin-d', quantity, selectedUnit),
+      vitamin_a: getValue('vitamin-a', quantity, selectedUnit),
+      iron: getValue('iron', quantity, selectedUnit),
+      magnesium: getValue('magnesium', quantity, selectedUnit),
+      calcium: getValue('calcium', quantity, selectedUnit),
+      potassium: getValue('potassium', quantity, selectedUnit),
+      zinc: getValue('zinc', quantity, selectedUnit),
     };
-  }, [grams, unit, n]);
-
-  const handleUnitChange = (selectedUnit: 'g'|'ml'|'oz') => setUnit(selectedUnit);
+  }, [amount, selectedUnit, n]);
 
   const handleInsert = async () => {
-    setLoading(true);
+  setLoading(true);
 
-    const quantity = parseFloat(grams);
-    if (!quantity || quantity <= 0) {
-      Alert.alert('Invalid amount');
-      setLoading(false);
-      return;
-    }
-
-    const { data: userData } = await supabase.auth.getUser();
-    const user_id = userData?.user?.id;
-    if (!user_id) {
-      Alert.alert('Login required', 'Please sign in again.');
-      setLoading(false);
-      return;
-    }
-
-    const entry = {
-      user_id,
-      barcode,
-      product_name: parsed.product_name || 'Unknown',
-      brand: parsed.brands || null,
-      category: parsed.categories_tags?.[0] || null,
-      image_url: parsed.image_url || null,
-      quantity,
-      unit,
-      calories: nutritionData.calories,
-      protein: nutritionData.protein,
-      carbs: nutritionData.carbs,
-      fat: nutritionData.fat,
-      saturated_fat: nutritionData.saturated_fat,
-      sugar: nutritionData.sugar,
-      salt: nutritionData.salt,
-      sodium: nutritionData.sodium,
-      vitamin_c: nutritionData.vitamin_c,
-      vitamin_b12: nutritionData.vitamin_b12,
-      vitamin_d: nutritionData.vitamin_d,
-      vitamin_a: nutritionData.vitamin_a,
-      iron: nutritionData.iron,
-      magnesium: nutritionData.magnesium,
-      calcium: nutritionData.calcium,
-      potassium: nutritionData.potassium,
-      zinc: nutritionData.zinc,
-      ingredients: parsed.ingredients_text || null,
-      allergens: parsed.allergens_tags || [],
-      additives: parsed.additives_tags || [],
-      traces: parsed.traces_tags || [],
-      raw_data: parsed,
-    };
-
-    const { error } = await supabase.from('food_entries').insert([entry]);
-
-    if (error) {
-      console.error('Supabase insert error:', error.message);
-      Alert.alert('Error', 'Could not insert food item.');
-    } else {
-      router.replace('/scanner');
-    }
-
+  const quantity = parseFloat(amount);
+  if (!quantity || quantity <= 0) {
+    Alert.alert('Invalid amount');
     setLoading(false);
-  };
+    return;
+  }
+
+  const { data: userData } = await supabase.auth.getUser();
+  const user_id = userData?.user?.id;
+  if (!user_id) {
+    Alert.alert('Login required', 'Please sign in again.');
+    setLoading(false);
+    return;
+  }
+
+  // Step 1: Upsert into foods table
+  const { data: foodData, error: foodError } = await supabase
+    .from('foods')
+    .upsert(
+      [
+        {
+          barcode,
+          product_name: parsed.product_name || 'Unknown',
+          brand: parsed.brands || null,
+          category: parsed.categories_tags?.[0] || null,
+          image_url: parsed.image_url || null,
+          calories: nutritionData.calories,
+          protein: nutritionData.protein,
+          carbs: nutritionData.carbs,
+          fat: nutritionData.fat,
+          saturated_fat: nutritionData.saturated_fat,
+          sugar: nutritionData.sugar,
+          salt: nutritionData.salt,
+          sodium: nutritionData.sodium,
+          vitamin_c: nutritionData.vitamin_c,
+          vitamin_b12: nutritionData.vitamin_b12,
+          vitamin_d: nutritionData.vitamin_d,
+          vitamin_a: nutritionData.vitamin_a,
+          iron: nutritionData.iron,
+          magnesium: nutritionData.magnesium,
+          calcium: nutritionData.calcium,
+          potassium: nutritionData.potassium,
+          zinc: nutritionData.zinc,
+          ingredients: parsed.ingredients_text || null,
+          allergens: parsed.allergens_tags || [],
+          additives: parsed.additives_tags || [],
+          traces: parsed.traces_tags || [],
+          raw_data: parsed
+        }
+      ],
+      { onConflict: 'barcode' }
+    )
+    .select()
+    .single();
+
+  if (foodError || !foodData) {
+    console.error(foodError);
+    Alert.alert('Error', 'Could not save food.');
+    setLoading(false);
+    return;
+  }
+
+  // Step 2: Insert into food_entries
+  const { error: entryError } = await supabase.from('food_entries').insert([
+    {
+      user_id,
+      food_id: foodData.id, // reference the foods table
+      quantity,
+      unit: selectedUnit
+    }
+  ]);
+
+  if (entryError) {
+    console.error(entryError);
+    Alert.alert('Error', 'Could not add food entry.');
+    setLoading(false);
+    return;
+  }
+
+  router.replace('/scanner');
+  setLoading(false);
+};
+
 
   const NutritionRow = ({ label, value, unit: nutritionUnit }) => {
     if (value === null) return null; // skjul rækker uden data
@@ -174,12 +218,12 @@ export default function DetailsScreen() {
       <Header
         leftIcon={
           <TouchableOpacity onPress={() => router.push(`/`)}>
-            <Ionicons name={isFavourite ? "exit" : "heart-outline"} size={24} color={isFavourite ? "#ff0000" : ui.text} />
+            <Ionicons name={"exit-outline"} size={24} color={ui.text} />
           </TouchableOpacity>
         }
         title=""
         rightIcon={
-          <TouchableOpacity onPress={handleFavourite}>
+          <TouchableOpacity onPress={toggleFavourite}>
             <Ionicons name={isFavourite ? "heart" : "heart-outline"} size={24} color={isFavourite ? "#ff0000" : ui.text} />
           </TouchableOpacity>
         }
@@ -193,43 +237,21 @@ export default function DetailsScreen() {
         <TextInput
           style={[styles.input, styles.quantityContainer, { borderColor: ui.border, color: ui.text }]}
           keyboardType="numeric"
-          value={grams}
-          onChangeText={setGrams}
+          value={amount}
+          onChangeText={setAmount}
           placeholder="Enter amount"
           placeholderTextColor={ui.bgLight}
         />
         <View style={styles.unitContainer}>
-          <TouchableOpacity
-            style={[styles.unitButton, { backgroundColor: ui?.bgLight ?? '#f2f2f2', borderColor: ui.border }]}
-            onPress={() => setShowUnitPicker(!showUnitPicker)}
-          >
-            <Text style={[styles.unitButtonText, { color: ui.text }]}>
-              {getUnitFullName(unit)}
-            </Text>
-            <Ionicons name={showUnitPicker ? "chevron-up" : "chevron-down"} size={16} color={ui.text} />
-          </TouchableOpacity>
-
-          {showUnitPicker && (
-            <View style={[styles.pickerContainer, { backgroundColor: ui?.bgLight ?? '#f2f2f2' }]}>
-              <Picker
-                selectedValue={unit}
-                onValueChange={handleUnitChange}
-                mode="dropdown"
-                dropdownIconColor={ui?.text}
-                itemStyle={{ color: ui?.text }}
-                accessibilityLabel="Select unit"
-              >
-                {unitOptions.map((u) => (
-                  <Picker.Item key={u.short} label={u.full} value={u.short} />
-                ))}
-              </Picker>
-            </View>
-          )}
+          <UnitPicker 
+            selectedUnit={selectedUnit}
+            onUnitChange={setSelectedUnit}
+          />
         </View>
       </View>
 
       <Text style={[styles.sectionTitle, { color: ui.text }]}>
-        Nutrition for {grams} {getUnitFullName(unit)}
+        Nutrition for {amount} {getUnitFullName(selectedUnit)}
       </Text>
 
       <View style={[styles.nutritionTable, { backgroundColor: ui?.bgLight ?? '#f8f8f8', borderColor: ui.border }]}>

@@ -238,12 +238,13 @@ badgeLabel: {
   textAlign: "center",
 },
   row: {
+    flex: 1,
     borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 12,
-    marginVertical: 4,
+    padding: 24,
+    marginVertical: 8,
   },
   rowLabel: {
     flexDirection: "row",

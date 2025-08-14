@@ -110,7 +110,7 @@ if (error) {
   const deleteExercise = async (exerciseId: number) => {
     try {
       const { error } = await supabase
-        .from("exercise_templates")
+        .from("workout_exercises")
         .delete()
         .eq("id", exerciseId);
 
@@ -232,8 +232,7 @@ if (error) {
           data={exercises}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
-          ListHeaderComponent={ListHeader}
-          ListFooterComponent={ListFooter}
+          ListFooterComponent={ListHeader}
           contentContainerStyle={styles.listContent}
         />
       </ScreenWrapper>
@@ -245,8 +244,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
-    fontSize: 24,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "600",
     marginTop: 16,
   },
   listContent: {
@@ -254,12 +253,8 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 12,
-    padding: 16,
+    padding: 32,
     marginVertical: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
   },
   exerciseName: { fontSize: 18, fontWeight: "600" },
   setsReps: { fontSize: 14, marginTop: 4 },

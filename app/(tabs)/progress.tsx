@@ -6,7 +6,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RadarChart } from 'react-native-gifted-charts';
 
 const CARD_WIDTH = (Dimensions.get('window').width);
@@ -35,7 +35,7 @@ export default function ProgressScreen() {
       */}
 
       <View style={styles.grid}>
-        <TouchableOpacity
+        <Pressable
           style={[styles.card, styles.cardShadow, { backgroundColor: ui.bg }]}
           onPress={() => router.push('/progress/workout-logs' as any)}
         >
@@ -46,31 +46,47 @@ export default function ProgressScreen() {
             <Text style={[styles.label, { color: ui.text }]}>Workouts</Text>
             <Text style={[styles.label, { color: ui.textMuted }]}>Check your workout history</Text>
           </View>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity
+        <Pressable
           style={[styles.card, styles.cardShadow, { backgroundColor: ui.bg }]}
           onPress={() => router.push('/progress/strength-progression' as any)}
         >
-          <Ionicons name="trending-up-outline" size={24} color={ui.textMuted} />
-          <Text style={[styles.label, { color: ui.text }]}>Strength</Text>
-        </TouchableOpacity>
+          <View style={styles.iconContainer}>
+            <Ionicons name="barbell-outline" size={24} color={ui.textMuted} />
+          </View>
+          <View>
+            <Text style={[styles.label, { color: ui.text }]}>Strength</Text>
+            <Text style={[styles.label, { color: ui.textMuted }]}>Check your workout history</Text>
+          </View>
+        </Pressable>
 
-        <TouchableOpacity
+        <Pressable
           style={[styles.card, styles.cardShadow, { backgroundColor: ui.bg }]}
           onPress={() => router.push('/progress/measurements' as any)}
         >
-          <Ionicons name="body-outline" size={24} color={ui.textMuted} />
-          <Text style={[styles.label, { color: ui.text }]}>Measurements</Text>
-        </TouchableOpacity>
+          <View style={styles.iconContainer}>
+            <Ionicons name="body-outline" size={24} color={ui.textMuted} />
+          </View>
+          <View>
+            <Text style={[styles.label, { color: ui.text }]}>Measurements</Text>
+            <Text style={[styles.label, { color: ui.textMuted }]}>Check your workout history</Text>
+          </View>
+        </Pressable>
 
-        <TouchableOpacity
+        <Pressable
           style={[styles.card, styles.cardShadow, { backgroundColor: ui.bg }]}
           onPress={() => router.push('/progress/weight' as any)}
         >
-          <Ionicons name="scale-outline" size={24} color={ui.textMuted} />
-          <Text style={[styles.label, { color: ui.text }]}>Weight</Text>
-        </TouchableOpacity>
+          <View style={styles.iconContainer}>
+            <Ionicons name="scale-outline" size={24} color={ui.textMuted} />
+          </View>
+          <View>
+            <Text style={[styles.label, { color: ui.text }]}>Weight</Text>
+            <Text style={[styles.label, { color: ui.textMuted }]}>Check your workout history</Text>
+          </View>
+        </Pressable>
+
       </View>
       <View style={{ backgroundColor: ui.bg, width: '100%', borderRadius: 12}}>
       <RadarChart data={[54, 53, 55, 52, 51, 55]}
@@ -99,38 +115,26 @@ const styles = StyleSheet.create({
     marginTop: 8
   },
   iconContainer: {
-    marginRight: 12,
+    width: '16%',
+    marginRight: 6,
+    alignItems: 'center',
   },
   card: {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
+    flex:1,
+    padding: 24,
     borderRadius: 12,
     marginBottom: 10,
     alignItems: 'center',
-    justifyContent: 'center',
     flexDirection: 'row',
   },
     cardShadow: {
-    shadowColor: "hsla(0, 0%, 80%, 1.00)",  
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
 
-    elevation: 2,
   },
   label: {
     fontSize: 16,
-    textAlign: 'center',
-    marginTop: 10,
+    marginTop: 6,
   },
   summaryWidget: {
     borderRadius: 5,
-  },
-  summaryTitle: {
-    fontSize: 16,
-    padding: 16,
   },
 });

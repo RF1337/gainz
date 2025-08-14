@@ -62,55 +62,17 @@ export default function Index({ loading }: { loading: boolean }) {
     exerciseGoal: null,
   });
 
-  const [todayNutrition, setTodayNutrition] = useState({
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fat: 0,
-  });
+ useFocusEffect(
+  useCallback(() => {
+    const loadGoals = async () => {
+      const allGoals = await getAllGoals();
+      setGoals(allGoals);
+    };
 
-  useFocusEffect(
-    useCallback(() => {
-      const loadGoalsAndNutrition = async () => {
-        const allGoals = await getAllGoals();
-        setGoals(allGoals);
+    loadGoals();
+  }, [])
+);
 
-        const { data: userData } = await supabase.auth.getUser();
-        const user_id = userData?.user?.id;
-
-        if (!user_id) return;
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const { data, error } = await supabase
-          .from("food_entries")
-          .select("calories, protein, carbs, fat, created_at")
-          .eq("user_id", user_id)
-          .gte("created_at", today.toISOString());
-
-        if (error) {
-          console.error("Failed to fetch food entries:", error.message);
-          return;
-        }
-
-        const totals = data.reduce(
-          (acc, entry) => {
-            acc.calories += entry.calories ?? 0;
-            acc.protein += entry.protein ?? 0;
-            acc.carbs += entry.carbs ?? 0;
-            acc.fat += entry.fat ?? 0;
-            return acc;
-          },
-          { calories: 0, protein: 0, carbs: 0, fat: 0 }
-        );
-
-        setTodayNutrition(totals);
-      };
-
-      loadGoalsAndNutrition();
-    }, [])
-  );
 
   const waterIntake = '2.5';
 
@@ -264,18 +226,10 @@ const styles = StyleSheet.create({
   welcome: {
     paddingVertical: 8,
   },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginVertical: 8 },
   squareCard: { flex: 1, padding: 16, borderRadius: 16, alignItems: 'center'},
   cardShadow: {
-    shadowColor: "hsla(0, 0%, 80%, 1.00)",  
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
 
-    elevation: 2,
   },
   iconRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginBottom: 8 },
   progressBackground: {

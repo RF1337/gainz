@@ -171,13 +171,11 @@ const ProgressIndicator: React.FC<{ completed: number; total: number }> = ({ com
 export default function WorkoutLogScreen() {
   const { ui } = useTheme();
 
-  const { programId, workoutId } = useLocalSearchParams<{
-    programId: string;
-    workoutId: string;
-  }>();
+  const { programId, workoutId } = useLocalSearchParams<{ programId: string; workoutId: string }>();
+
   const router = useRouter();
-  const workoutNum = workoutId ? parseInt(workoutId, 10) : NaN;
-  if (isNaN(workoutNum)) return null;
+  if (!workoutId || typeof workoutId !== "string") return null; // UUID string
+
 
   const [exTemplates, setExTemplates] = useState<ExerciseTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,10 +202,10 @@ if (userError || !user) {
 }
 
 const { data: logData, error: logError } = await supabase
-  .from("workout_logs")
+  .from("user_workouts")
   .insert([
     {
-      workout_template_id: workoutNum,
+      workout_id: workoutId,
       user_id: user.id // 👈 Add this line
     }
   ])
@@ -224,9 +222,9 @@ const { data: logData, error: logError } = await supabase
 
       // Fetch exercise templates
       const { data: exData, error: exError } = await supabase
-        .from("exercise_templates")
-        .select("id, name, default_sets, default_reps, order_index")
-        .eq("workout_template_id", workoutNum)
+        .from("workout_exercises")
+        .select("id, default_sets, default_reps, order_index")
+        .eq("workout_id", workoutId)
         .order("order_index", { ascending: true });
 
       if (exError || !exData) {
@@ -252,7 +250,7 @@ const { data: logData, error: logError } = await supabase
     };
 
     initialize();
-  }, [workoutNum, router]);
+  }, [workoutId, router]);
 
   if (loading || sessionId === null) {
     return (
@@ -379,20 +377,35 @@ const toggleWarmup = (exId: number, setIdx: number) => {
     return;
   }
 
-  const toInsert = Object.entries(logs).flatMap(
-    ([exIdStr, entries]) => {
-      const exId = parseInt(exIdStr, 10);
-      return entries.map((entry, idx) => ({
-        user_id: user.id, // 👈 Include user ID here
-        workout_log_id: sessionId,
-        exercise_template_id: exId,
-        set_number: idx + 1,
-        reps_performed: parseInt(entry.reps, 10) || 0,
-        weight_used: parseFloat(entry.weight) || 0,
-        is_warmup: entry.isWarmup,
-      }));
+  // Hjælpere til sikker parsing
+  const toInt = (v: string) => {
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : 0; // skift til: return Number.isFinite(n) ? n : null;
+  };
+
+  const toFloat = (v: string) => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : 0; // skift til: return Number.isFinite(n) ? n : null;
+  };
+
+  // Byg payload
+  const toInsert = Object.entries(logs).flatMap(([exIdStr, entries]) => {
+    const exercise_template_id = Number(exIdStr);
+    if (!Number.isInteger(exercise_template_id)) {
+      // Ignorer nøgler der ikke kan mappes til et heltal
+      return [];
     }
-  );
+
+    return entries.map((entry, idx) => ({
+      user_id: user.id,                  // uuid
+      workout_log_id: sessionId!,        // uuid (sørg for at sessionId er string og ikke null her)
+      exercise_template_id,              // int (FK til workout_exercises.id)
+      set_number: idx + 1,               // int
+      reps_performed: toInt(entry.reps), // int (eller null hvis nullable)
+      weight_used: toFloat(entry.weight),// numeric/float (eller null hvis nullable)
+      is_warmup: entry.isWarmup,         // boolean
+    }));
+  });
 
   const { error: insertError } = await supabase
     .from("exercise_logs")

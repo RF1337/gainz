@@ -44,6 +44,7 @@ export default function MacroCircle({ protein, carbs, fat, size = 120 }: Props) 
       data={pieData}
       radius={60}
       donut
+      innerCircleColor={ui.bg}
       innerRadius={40}
       centerLabelComponent={() => {
                 return (

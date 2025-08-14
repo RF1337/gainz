@@ -29,7 +29,7 @@ export default function MacroView({ data }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleContainer}>
-          <Text style={[styles.title, { color: ui.text }]}>Nutrition</Text>
+          <Text style={[styles.title, { color: ui.text }]}>Today's intake</Text>
         </View>
 
         <TouchableOpacity
@@ -44,9 +44,6 @@ export default function MacroView({ data }: Props) {
       <View style={styles.content}>
         {/* Calories */}
         <View>
-          <View>
-            <Text style={[styles.caloriesLabel, { color: ui.text }]}>Today's intake</Text>
-          </View>
           <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
           <Text style={[styles.caloriesValue, { color: ui.text, marginRight: 2}]}>
             {Math.ceil(data.calories).toLocaleString()}
