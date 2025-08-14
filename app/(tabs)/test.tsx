@@ -1,139 +1,150 @@
 import React, { useState } from 'react';
-import { Alert, Button, Platform, StyleSheet, Text, View } from 'react-native';
-import {
-    getStepCount,
-    initHealthKit,
-    isAvailable,
-    requestPermissions
-} from 'react-native-health';
+import { Alert, Button, StyleSheet, Text, View } from 'react-native';
 
-export default function HealthTestScreen() {
+const { AppleHealthKit } = require('react-native').NativeModules;
+
+export default function HealthKitTest() {
   const [stepCount, setStepCount] = useState<number>(0);
-  const [hasPermissions, setHasPermissions] = useState<boolean>(false);
+  const [bmi, setBmi] = useState<number | null>(null);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Health permissions we want to read
+  // HealthKit permissions
   const permissions = {
     permissions: {
       read: [
-        'StepCount',
-        'DistanceWalkingRunning',
-        'Calories',
-        'HeartRate',
+        'Steps',
+        'StepCount', 
+        'BodyMassIndex',
+        'Height',
+        'Weight'
       ],
       write: []
     }
   };
 
-  // Initialize HealthKit and request permissions
-  const initializeHealth = async () => {
-    if (Platform.OS !== 'ios') {
-      Alert.alert('Error', 'HealthKit is only available on iOS');
+  // Initialize HealthKit with permissions
+  const initializeHealthKit = () => {
+    if (!AppleHealthKit) {
+      Alert.alert('Error', 'HealthKit not available');
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);
 
-      // Check if HealthKit is available
-      const available = await isAvailable();
-      if (!available) {
-        Alert.alert('Error', 'HealthKit is not available on this device');
+    // Check availability first
+    AppleHealthKit.isAvailable((error: any, available: boolean) => {
+      if (error || !available) {
+        Alert.alert('Error', 'HealthKit not available on this device');
+        setLoading(false);
         return;
       }
 
-      // Initialize HealthKit
-      await initHealthKit(permissions);
+      // Initialize with permissions
+      AppleHealthKit.initHealthKit(permissions, (error: any) => {
+        if (error) {
+          console.log('HealthKit init error:', error);
+          Alert.alert('Error', 'Failed to get HealthKit permissions');
+          setLoading(false);
+          return;
+        }
 
-      // Request permissions
-      await requestPermissions(permissions);
+        setIsInitialized(true);
+        Alert.alert('Success', 'HealthKit initialized!');
+        setLoading(false);
 
-      setHasPermissions(true);
-      Alert.alert('Success', 'HealthKit permissions granted!');
-
-      // Fetch today's steps
-      await fetchTodaysSteps();
-
-    } catch (error: unknown) {
-      console.error('HealthKit initialization error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      Alert.alert('Error', `Failed to initialize HealthKit: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
+        // Now we can safely fetch data
+        fetchHealthData();
+      });
+    });
   };
 
-  // Fetch today's step count
-  const fetchTodaysSteps = async () => {
-    if (!hasPermissions) {
-      Alert.alert('Error', 'Please grant HealthKit permissions first');
+  // Fetch health data (only after permissions granted)
+  const fetchHealthData = () => {
+    if (!isInitialized || !AppleHealthKit) {
+      Alert.alert('Error', 'HealthKit not initialized');
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);
 
-      // Get today's date range
-      const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // Get today's steps
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const stepOptions = {
+      startDate: startOfDay.toISOString(),
+      endDate: today.toISOString(),
+    };
 
-      // Query step count for today
-      const options = {
-        startDate: startOfToday.toISOString(),
-        endDate: now.toISOString(),
-      };
+    AppleHealthKit.getStepCount(stepOptions, (error: any, results: any) => {
+      if (error) {
+        console.log('Step count error:', error);
+      } else {
+        console.log('Steps:', results);
+        setStepCount(results?.value || 0);
+      }
+    });
 
-      const steps = await getStepCount(options);
-      setStepCount(steps.value || 0);
-
-    } catch (error: unknown) {
-      console.error('Steps fetch error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      Alert.alert('Error', `Failed to fetch steps: ${errorMessage}`);
-    } finally {
+    // Get latest BMI
+    AppleHealthKit.getLatestBmi({}, (error: any, results: any) => {
+      if (error) {
+        console.log('BMI error:', error);
+        setBmi(null);
+      } else {
+        console.log('BMI:', results);
+        setBmi(results?.value || null);
+      }
       setLoading(false);
-    }
+    });
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>HealthKit Step Counter</Text>
-      
-      <View style={styles.stepDisplay}>
-        <Text style={styles.stepCount}>
-          {stepCount.toLocaleString()}
-        </Text>
-        <Text style={styles.stepLabel}>Steps Today</Text>
-      </View>
+      <Text style={styles.title}>HealthKit Test</Text>
 
-      <View style={styles.buttonContainer}>
-        {!hasPermissions ? (
+      {!isInitialized ? (
+        <View style={styles.initSection}>
+          <Text style={styles.description}>
+            HealthKit needs permissions to access your health data
+          </Text>
           <Button
             title={loading ? "Initializing..." : "Setup HealthKit"}
-            onPress={initializeHealth}
+            onPress={initializeHealthKit}
             disabled={loading}
           />
-        ) : (
-          <Button
-            title={loading ? "Loading..." : "Refresh Steps"}
-            onPress={fetchTodaysSteps}
-            disabled={loading}
-          />
-        )}
-      </View>
+        </View>
+      ) : (
+        <View style={styles.dataSection}>
+          <View style={styles.dataCard}>
+            <Text style={styles.dataLabel}>Steps Today</Text>
+            <Text style={styles.dataValue}>
+              {stepCount.toLocaleString()}
+            </Text>
+          </View>
 
-      <View style={styles.infoContainer}>
-        <Text style={styles.infoText}>
-          Status: {hasPermissions ? '✅ Connected' : '❌ Not connected'}
+          <View style={styles.dataCard}>
+            <Text style={styles.dataLabel}>Latest BMI</Text>
+            <Text style={styles.dataValue}>
+              {bmi ? bmi.toFixed(1) : 'No data'}
+            </Text>
+          </View>
+
+          <Button
+            title={loading ? "Loading..." : "Refresh Data"}
+            onPress={fetchHealthData}
+            disabled={loading}
+          />
+        </View>
+      )}
+
+      <View style={styles.statusContainer}>
+        <Text style={styles.statusText}>
+          Status: {isInitialized ? '✅ Connected' : '❌ Not connected'}
         </Text>
-        <Text style={styles.infoText}>
-          Platform: {Platform.OS}
+        <Text style={styles.statusText}>
+          Module: {AppleHealthKit ? '✅ Available' : '❌ Missing'}
         </Text>
-        {Platform.OS !== 'ios' && (
-          <Text style={styles.warningText}>
-            ⚠️ HealthKit only works on iOS devices
-          </Text>
-        )}
       </View>
     </View>
   );
@@ -142,66 +153,62 @@ export default function HealthTestScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     padding: 20,
     backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 40,
     textAlign: 'center',
+    marginBottom: 30,
     color: '#333',
   },
-  stepDisplay: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 40,
+  initSection: {
     alignItems: 'center',
     marginBottom: 40,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    minWidth: 200,
   },
-  stepCount: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 10,
-  },
-  stepLabel: {
-    fontSize: 18,
+  description: {
+    fontSize: 16,
     color: '#666',
-    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 24,
   },
-  buttonContainer: {
-    marginBottom: 30,
-    width: '80%',
+  dataSection: {
+    gap: 20,
+    marginBottom: 40,
   },
-  infoContainer: {
+  dataCard: {
     backgroundColor: 'white',
     padding: 20,
-    borderRadius: 10,
-    width: '100%',
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  dataLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  dataValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  statusContainer: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 8,
     alignItems: 'center',
   },
-  infoText: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: '#333',
-  },
-  warningText: {
+  statusText: {
     fontSize: 14,
-    color: '#FF6B6B',
-    fontWeight: '500',
-    marginTop: 10,
-    textAlign: 'center',
+    color: '#666',
+    marginBottom: 3,
   },
 });
