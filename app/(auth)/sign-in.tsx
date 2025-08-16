@@ -1,5 +1,5 @@
 // screens/sign-in.tsx
-import { useThemeContext } from '@/context/ThemeContext';
+import useTheme from '@/hooks/useTheme';
 import { supabase } from '@/lib/supabase';
 import * as AuthSession from 'expo-auth-session';
 import { useRouter } from 'expo-router';
@@ -17,15 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SignIn() {
-  const { scheme } = useThemeContext();
-  const isDark = scheme === 'dark';
-
-  const colors = {
-    background: isDark ? '#121212' : '#fff',
-    label: isDark ? '#ddd' : '#333',
-    inputBorder: isDark ? '#777' : '#ccc',
-    inputBackground: isDark ? '#121212' : '#fafafa',
-  };
+  const { ui } = useTheme();
 
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -93,12 +85,12 @@ export default function SignIn() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? "#121212" : "#fff" }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}>
       {/* Email/password form */}
       <View style={[styles.verticallySpaced]}>
-        <Text style={[styles.label, { color: colors.label }]}>Email</Text>
+        <Text style={[styles.label, { color: ui.text }]}>Email</Text>
         <TextInput
-          style={[styles.input, { borderColor: colors.inputBorder, backgroundColor: colors.inputBackground }]}
+          style={[styles.input, { borderColor: ui.textMuted, backgroundColor: ui.bg, color: ui.text }]}
           placeholder="you@example.com"
           autoCapitalize="none"
           keyboardType="email-address"
@@ -108,9 +100,9 @@ export default function SignIn() {
       </View>
 
       <View style={styles.verticallySpaced}>
-        <Text style={[styles.label, { color: colors.label }]}>Password</Text>
+        <Text style={[styles.label, { color: ui.text }]}>Password</Text>
         <TextInput
-          style={[styles.input, { borderColor: colors.inputBorder, backgroundColor: colors.inputBackground }]}
+          style={[styles.input, { borderColor: ui.textMuted, backgroundColor: ui.bg, color: ui.text }]}
           placeholder="••••••••"
           secureTextEntry
           autoCapitalize="none"
@@ -119,9 +111,18 @@ export default function SignIn() {
         />
       </View>
 
+      <View style={styles.verticallySpaced}>
+        <Pressable onPress={() => router.push('/(auth)/sign-up')}>
+          <Text style={styles.linkText}>
+            Don't have an account?{' '}
+            <Text style={styles.signInText}>Sign Up</Text>
+          </Text>
+        </Pressable>
+      </View>
+
       <View style={[styles.verticallySpaced, styles.mt20]}>
         <Pressable
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, loading && styles.buttonDisabled, { backgroundColor: ui.primary }]}
           onPress={handleEmailSignIn}
           disabled={loading}
         >
@@ -195,7 +196,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    backgroundColor: '#ff6b00',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -253,4 +253,7 @@ const styles = StyleSheet.create({
   oauthTextWhite: { color: '#fff', fontWeight: '600', fontSize: 16 },
 
   disabled: { opacity: 0.6 },
+
+    linkText: { color: '#666', marginTop: 12, textAlign: 'center' },
+  signInText: { color: '#007aff' }, // blue for "Sign In"
 });

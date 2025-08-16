@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 2,
     borderRadius: 100,
   },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 16, height: 40 },

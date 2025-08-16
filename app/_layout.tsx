@@ -1,3 +1,4 @@
+import { HealthDataProvider } from '@/providers/HealthDataProvider';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -69,6 +70,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <BottomSheetModalProvider>
           <ThemeProvider>
+            <HealthDataProvider>
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'slide_from_left', animationDuration: 200 }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false, animation: 'slide_from_left', animationDuration: 200 }} />
@@ -77,9 +79,12 @@ export default function RootLayout() {
               <Stack.Screen name="progress" options={{ headerShown: false, animation: 'slide_from_left', animationDuration: 200 }} />
               <Stack.Screen name="settings" options={{ headerShown: false, animation: 'slide_from_left', animationDuration: 200 }} />
               <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'slide_from_left', animationDuration: 200 }} />
+              <Stack.Screen name="sleep" options={{ headerShown: false, animation: 'slide_from_left', animationDuration: 200 }} />
+              <Stack.Screen name="steps" options={{ headerShown: false, animation: 'slide_from_left', animationDuration: 200 }} />
               <Stack.Screen name="workouts" options={{ headerShown: false, animation: 'slide_from_left', animationDuration: 200 }} />
               <Stack.Screen name="+not-found" options={{ headerShown: false, animation: 'slide_from_left', animationDuration: 200 }} />
             </Stack>
+            </HealthDataProvider>
             <ThemedStatusBar />
             <Toast />
           </ThemeProvider>

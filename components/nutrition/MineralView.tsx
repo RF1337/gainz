@@ -1,4 +1,3 @@
-import MacroCircle from '@/components/MacroCircle';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { SCREEN_WIDTH } from '@gorhom/bottom-sheet';
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import CalorieCircle from '../CalorieCircle';
 
 type Props = {
   data: {
@@ -42,25 +42,25 @@ export default function MacroView({ data }: Props) {
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Calories */}
-        <View>
-          <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
-          <Text style={[styles.caloriesValue, { color: ui.text, marginRight: 2}]}>
-            {Math.ceil(data.calories).toLocaleString()}
-          </Text>
-          <Text style={[styles.caloriesUnit, { color: ui.textMuted}]}>kcal</Text>
-          </View>
-        </View>
-
         {/* Macro Circle */}
         <View>
-          <MacroCircle
-            carbs={Math.ceil(data.carbs)}
-            protein={Math.ceil(data.protein)}
-            fat={Math.ceil(data.fat)}
-            size={120}
-            // Sørg i selve MacroCircle for at radius tager højde for strokeWidth
+          <CalorieCircle
+            calories={Math.ceil(data.calories)}
+            caloriesGoal={2000}
+            radius={60}
+            thickness={20}
           />
+        </View>
+        <View>
+          <Text style={[styles.caloriesLabel, { color: ui.text }]}>
+            Base goal
+          </Text>
+          <Text style={[styles.caloriesLabel, { color: ui.text }]}>
+            Food
+          </Text>
+          <Text style={[styles.caloriesLabel, { color: ui.text }]}>
+            Burnt
+          </Text>
         </View>
       </View>
     </View>
@@ -78,12 +78,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
   },
 
   titleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
   },
 
   title: {
@@ -95,6 +93,7 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     },
 
   caloriesLabel: {

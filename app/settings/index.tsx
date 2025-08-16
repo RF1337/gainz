@@ -3,6 +3,7 @@ import React from "react";
 import {
   Alert,
   Image,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,13 +15,14 @@ import Header from "@/components/Header";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/theme/ThemeProvider";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
 
-export default function SettingsScreen() {
+export default async function SettingsScreen() {
   const { ui } = useTheme();
-
+  
   const handleClearData = () => {
     Alert.alert("Confirm", "Are you sure you want to clear all data?", [
       { text: "Cancel", style: "cancel" },
@@ -40,6 +42,10 @@ export default function SettingsScreen() {
       router.replace("/(auth)");
     }
   };
+
+  const debugOnboarding = async () => {
+    await AsyncStorage.setItem('hasSeenOnboarding', 'false');
+  }
 
   const handleLogout = () => {
   Alert.alert("Confirm", "Are you sure you want to log out?", [
@@ -152,18 +158,16 @@ export default function SettingsScreen() {
       {renderRow("exit-outline", "Log out", "Sign out of your account", handleLogout, {})}
 
       {/* --- Version --- */}
+      <Pressable onPress={debugOnboarding}>
+        <Text style={[styles.version, { color: ui.text }]}>Test onboarding</Text>
+      </Pressable>
+      {/* --- Version --- */}
       <Text style={[styles.version, { color: ui.text }]}>App Version: 1.0.0</Text>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    alignContent: "center",
-    textAlign: "center",
-  },
   sectionHeader: {
     fontSize: 16,
     fontWeight: "600",

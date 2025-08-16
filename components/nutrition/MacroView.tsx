@@ -1,4 +1,3 @@
-import MacroCircle from '@/components/MacroCircle';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { SCREEN_WIDTH } from '@gorhom/bottom-sheet';
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import MacroCircle from '../MacroCircle';
 
 type Props = {
   data: {
@@ -28,9 +28,7 @@ export default function MacroView({ data }: Props) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Text style={[styles.title, { color: ui.text }]}>Today's intake</Text>
-        </View>
+        <Text style={[styles.title, { color: ui.text }]}>Today's intake</Text>
 
         <TouchableOpacity
           onPress={() => router.push('/scanner')}
@@ -42,26 +40,41 @@ export default function MacroView({ data }: Props) {
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Calories */}
-        <View>
-          <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
-          <Text style={[styles.caloriesValue, { color: ui.text, marginRight: 2}]}>
-            {Math.ceil(data.calories).toLocaleString()}
-          </Text>
-          <Text style={[styles.caloriesUnit, { color: ui.textMuted}]}>kcal</Text>
-          </View>
+        {/* Circle column */}
+        <View style={{ width: 120, alignItems: 'center' }}>  {/* 2 * radius = 120 */}
+          <MacroCircle protein={data.protein} carbs={data.carbs} fat={data.fat} />
         </View>
 
-        {/* Macro Circle */}
-        <View>
-          <MacroCircle
-            carbs={Math.ceil(data.carbs)}
-            protein={Math.ceil(data.protein)}
-            fat={Math.ceil(data.fat)}
-            size={120}
-            // Sørg i selve MacroCircle for at radius tager højde for strokeWidth
-          />
-        </View>
+        {/* Labels column */}
+        <View style={{ height: 120, justifyContent: 'space-evenly', alignItems: 'flex-start' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ backgroundColor: '#ff595e66', borderRadius: 50, height: 32, width: 32, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                            <Ionicons name="flag-outline" size={24} color={'#ff595e'} />
+                        </View>                
+                        <View>
+                            <Text style={[styles.caloriesLabel, { color: ui.text }]}>Protein</Text>
+                            <Text style={[styles.caloriesLabel, { color: ui.textMuted }]}>{data.protein} g</Text>
+                        </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ backgroundColor: '#1982c466', borderRadius: 50, height: 32, width: 32, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                            <Ionicons name="flame-outline" size={24} color={'#1982c4'} />
+                        </View>                
+                        <View>
+                            <Text style={[styles.caloriesLabel, { color: ui.text }]}>Carbs</Text>
+                            <Text style={[styles.caloriesLabel, { color: ui.textMuted }]}>{data.carbs} g</Text>
+                        </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ backgroundColor: '#ffca3a66', borderRadius: 50, height: 32, width: 32, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+                            <Ionicons name="restaurant-outline" size={24} color={'#ffca3a'} />
+                        </View>                
+                        <View>
+                            <Text style={[styles.caloriesLabel, { color: ui.text }]}>Fat</Text>
+                            <Text style={[styles.caloriesLabel, { color: ui.textMuted }]}>{data.fat} g</Text>
+                        </View>
+                    </View>
+                </View>
       </View>
     </View>
   );
@@ -70,6 +83,7 @@ export default function MacroView({ data }: Props) {
 const styles = StyleSheet.create({
   // Ikke noget kort/shadow her – det styres af overordnet widget
   container: {
+    flex: 1,
     padding: 0,
     width: SCREEN_WIDTH - 64,
   },
@@ -77,12 +91,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-
-  titleContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
   },
 
@@ -93,7 +101,9 @@ const styles = StyleSheet.create({
   },
 
   content: {
+    flex: 1,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     },
 

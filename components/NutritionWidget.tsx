@@ -8,6 +8,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import CalorieView from './nutrition/CalorieView';
 import MacroView from './nutrition/MacroView';
 import MineralView from './nutrition/MineralView';
 import VitaminView from './nutrition/VitaminView';
@@ -102,6 +103,7 @@ useEffect(() => {
 
 
   const pages = [
+    { key: 'calories', component: <CalorieView data={nutrition} /> },
     { key: 'macros', component: <MacroView data={nutrition} /> },
     { key: 'vitamins', component: <VitaminView data={nutrition} /> },
     { key: 'minerals', component: <MineralView data={nutrition} /> },
@@ -116,7 +118,7 @@ useEffect(() => {
   return (
     <>
       <View
-        style={[styles.cardShadow, styles.container, { backgroundColor: ui.bg }]}
+        style={[styles.cardShadow, styles.container, { backgroundColor: ui.bg, borderWidth: 1, borderColor: ui.bgLight }]}
         onLayout={e => setPageWidth(e.nativeEvent.layout.width)}
       >
         <FlatList

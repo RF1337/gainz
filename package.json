@@ -16,6 +16,7 @@
     "@bittingz/expo-widgets": "^3.0.2",
     "@expo-google-fonts/inter": "^0.4.1",
     "@expo/config-plugins": "~10.1.1",
+    "@expo/ui": "~0.1.1-alpha.10",
     "@expo/vector-icons": "^14.1.0",
     "@gorhom/bottom-sheet": "^5.1.6",
     "@kingstinct/react-native-healthkit": "^9.0.11",
@@ -74,6 +75,7 @@
     "react-native-ios-utilities": "^5.1.2",
     "react-native-nitro-modules": "^0.27.6",
     "react-native-picker-select": "^9.3.1",
+    "react-native-purchases": "^9.2.1",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
@@ -84,7 +86,8 @@
     "react-native-vision-camera": "^4.7.1",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
-    "zeego": "^3.0.6"
+    "zeego": "^3.0.6",
+    "@shopify/flash-list": "1.7.6"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -7,15 +7,10 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function ProfileScreen() {
-  const {ui} = useTheme();
+  const { ui } = useTheme();
   const { t } = useTranslation();
 
   const [workouts, setWorkouts] = useState(0);
@@ -24,88 +19,87 @@ export default function ProfileScreen() {
   const [username, setUsername] = useState("user");
 
   useEffect(() => {
-  const fetchUserProfile = async () => {
-    try {
-      // Get logged-in user
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+    const fetchUserProfile = async () => {
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+        if (userError || !user) return;
 
-      if (userError || !user) return;
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .single();
 
-      // Fetch user profile data (adjust table/column names to your schema)
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles") // or "profiles" if your table is plural
-        .select("username")
-        .eq("id", user.id)
-        .single();
+        if (!profileError && profile?.username) {
+          setUsername(profile.username);
+        }
 
-      if (!profileError && profile?.username) {
-        setUsername(profile.username);
+        const { count, error: workoutError } = await supabase
+          .from("workout_logs")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id);
+
+        if (!workoutError && typeof count === "number") {
+          setWorkouts(count);
+        }
+      } catch (error) {
+        console.error("Failed to fetch profile info:", error);
       }
+    };
 
-      // Fetch workout count
-      const { count, error: workoutError } = await supabase
-        .from("workout_logs")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id); // adjust if your schema differs
+    fetchUserProfile();
+  }, []);
 
-      if (!workoutError && typeof count === "number") {
-        setWorkouts(count);
-      }
-    } catch (error) {
-      console.error("Failed to fetch profile info:", error);
-    }
-  };
-
-  fetchUserProfile();
-}, []);
-
-const renderRow = (
+  // NY: Badge-kort i grid
+  const renderBadge = (
     icon: string,
-    label: string,
+    title: string,
     subLabel: string,
-    onPress: () => void,
-    options?: { iconColor?: string; showChevron?: boolean }
+    onPress: () => void
   ) => (
-    <TouchableOpacity style={[styles.row, { backgroundColor: ui.bg }]} onPress={onPress}>
-      <View style={styles.rowLabel}>
-        <Ionicons
-          name={icon as any}
-          size={20}
-          color={options?.iconColor ?? ui.textMuted}
-          style={styles.icon}
-        />
-        <View>
-          <Text style={[styles.label, { color: ui.text }]}>{label}</Text>
-          {subLabel.length > 0 && (
-            <Text style={[styles.subLabel, { color: ui.textMuted }]}>
-              {subLabel}
-            </Text>
-          )}
-        </View>
+    <TouchableOpacity
+      style={[
+        styles.badgeBox,
+        {
+          backgroundColor: ui.bg,
+          borderColor: ui.bgLight,
+        },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <View style={styles.badgeIconWrap}>
+        <Ionicons name={icon as any} size={26} color={ui.text} />
       </View>
-      {options?.showChevron !== false && (
-        <Ionicons name="chevron-forward-outline" size={20} color={ui.text} />
-      )}
+      <Text style={[styles.badgeTitle, { color: ui.text }]} numberOfLines={1}>
+        {title}
+      </Text>
+      <Text
+        style={[styles.badgeSubLabel, { color: ui.textMuted }]}
+        numberOfLines={2}
+      >
+        {subLabel}
+      </Text>
     </TouchableOpacity>
   );
 
   return (
     <ScreenWrapper>
-      {/* Settings icon */}
+      {/* Header */}
       <Header
         leftIcon={
           <TouchableOpacity onPress={() => router.push("/settings")}>
-          <Ionicons name="person-add-outline" size={24} color={ui.text} />
-        </TouchableOpacity>
+            <Ionicons name="person-add-outline" size={24} color={ui.text} />
+          </TouchableOpacity>
         }
-        title={t('navigation.profile')}
+        title={t("navigation.profile")}
         rightIcon={
-        <TouchableOpacity onPress={() => router.push("/settings")}>
-          <Ionicons name="settings-outline" size={24} color={ui.text} />
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/settings")}>
+            <Ionicons name="settings-outline" size={24} color={ui.text} />
+          </TouchableOpacity>
         }
       />
 
@@ -115,38 +109,92 @@ const renderRow = (
           <AvatarIcon size={135} />
         </TouchableOpacity>
         <Text style={[styles.displayName, { color: ui.text }]}>{username}</Text>
-        <Text style={[styles.username, { color: ui.textMuted }]}>@{username}</Text>
+        <Text style={[styles.username, { color: ui.textMuted }]}>
+          @{username}
+        </Text>
       </View>
 
       {/* Stats */}
       <View style={styles.statsRow}>
         <View style={styles.stat}>
           <Text style={[styles.statNumber, { color: ui.text }]}>{workouts}</Text>
-          <Text style={[styles.statLabel, { color: ui.textMuted }]}>Workouts</Text>
+          <Text style={[styles.statLabel, { color: ui.textMuted }]}>
+            Workouts
+          </Text>
         </View>
         <View style={styles.verticalDivider} />
         <View style={styles.stat}>
-          <Text style={[styles.statNumber, { color: ui.text }]}>{followers}</Text>
-          <Text style={[styles.statLabel, { color: ui.textMuted }]}>Followers</Text>
+          <Text style={[styles.statNumber, { color: ui.text }]}>
+            {followers}
+          </Text>
+          <Text style={[styles.statLabel, { color: ui.textMuted }]}>
+            Followers
+          </Text>
         </View>
         <View style={styles.verticalDivider} />
         <View style={styles.stat}>
-          <Text style={[styles.statNumber, { color: ui.text }]}>{following}</Text>
-          <Text style={[styles.statLabel, { color: ui.textMuted }]}>Following</Text>
+          <Text style={[styles.statNumber, { color: ui.text }]}>
+            {following}
+          </Text>
+          <Text style={[styles.statLabel, { color: ui.textMuted }]}>
+            Following
+          </Text>
         </View>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity style={[styles.iconButton, { borderColor: ui.text }]}>
           <Ionicons name="share-outline" size={24} color={ui.text} />
         </TouchableOpacity>
       </View>
 
-      {/* Widgets */}
-      <View>
-        {renderRow("people-outline", "Friends", "Manage your friends", () => router.push("../settings/friends"))}
-        {renderRow("calendar-outline", "Workout History", "View your workout history", () => router.push("../settings/workout-history"))}
-        {renderRow("trophy-outline", "Goals", "Set and manage your goals", () => router.push("../settings/goals"))}
-        {renderRow("nutrition-outline", "Food Summary", "View daily and weekly intake", () => router.push("../settings/food-summary"))}
-        {renderRow("flame-outline", "Streaks", "Track workout consistency", () => router.push("../settings/streaks"))}
-        {renderRow("medal-outline", "Badges", "See your earned achievements", () => router.push("../settings/badges"))}
+      {/* 2×2 Badge-grid */}
+      <View style={styles.badgeGrid}>
+        {renderBadge(
+          "walk-outline",
+          "Step Master",
+          "Opnåede 20k skridt på én dag",
+          () => router.push("../settings/steps") // skift evt. rute
+        )}
+        {renderBadge(
+          "flame-outline",
+          "Streak King",
+          "7 dages workout-streak",
+          () => router.push("../settings/streaks")
+        )}
+        {renderBadge(
+          "nutrition-outline",
+          "Calorie Crusher",
+          "Holdt kalorie-målet i 5 dage",
+          () => router.push("../settings/food-summary")
+        )}
+        {renderBadge(
+          "barbell-outline",
+          "Gym Rat",
+          "50 loggede workouts samlet",
+          () => router.push("../settings/workout-history")
+        )}
+        {renderBadge(
+          "walk-outline",
+          "Step Master",
+          "Opnåede 20k skridt på én dag",
+          () => router.push("../settings/steps") // skift evt. rute
+        )}
+        {renderBadge(
+          "flame-outline",
+          "Streak King",
+          "7 dages workout-streak",
+          () => router.push("../settings/streaks")
+        )}
+        {renderBadge(
+          "nutrition-outline",
+          "Calorie Crusher",
+          "Holdt kalorie-målet i 5 dage",
+          () => router.push("../settings/food-summary")
+        )}
+        {renderBadge(
+          "barbell-outline",
+          "Gym Rat",
+          "50 loggede workouts samlet",
+          () => router.push("../settings/workout-history")
+        )}
       </View>
     </ScreenWrapper>
   );
@@ -159,7 +207,7 @@ const styles = StyleSheet.create({
   userRow: {
     alignItems: "center",
     justifyContent: "center",
-    },
+  },
   username: {
     fontSize: 16,
   },
@@ -200,7 +248,6 @@ const styles = StyleSheet.create({
   editButton: {
     borderWidth: 1,
     borderRadius: 32,
-    paddingHorizontal: 20,
     paddingVertical: 8,
   },
   editText: {
@@ -215,51 +262,43 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
+  // NYE styles til badge-grid
   badgeGrid: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  justifyContent: "center",
-  marginTop: 24,
-  gap: 16,
-},
-badgeBox: {
-  width: 120,
-  height: 100,
-  borderRadius: 16,
-  backgroundColor: "#2c2c2e", // or ui.bg if you want theme-aware
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 12,
-},
-badgeLabel: {
-  marginTop: 8,
-  fontSize: 14,
-  fontWeight: "500",
-  textAlign: "center",
-},
-  row: {
-    flex: 1,
-    borderRadius: 8,
     flexDirection: "row",
-    alignItems: "center",
+    flexWrap: "wrap",
     justifyContent: "space-between",
-    padding: 24,
-    marginVertical: 8,
+    marginTop: 8,
+    gap: 8,
   },
-  rowLabel: {
-    flexDirection: "row",
+  badgeBox: {
+    width: "48.8%",            // 2 per række
+    aspectRatio: 1.1,        // næsten kvadratisk
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    position: "relative",
+    overflow: "hidden",
+  },
+  badgeIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
     alignItems: "center",
-    flex: 1,
+    marginBottom: 8,
   },
-  icon: {
-    marginRight: 12,
-  },
-  label: {
+  badgeTitle: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
   },
-  subLabel: {
+  badgeSubLabel: {
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 4,
+  },
+  badgeChevron: {
+    position: "absolute",
+    right: 10,
+    bottom: 10,
   },
 });

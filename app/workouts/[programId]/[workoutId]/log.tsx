@@ -1,6 +1,7 @@
 // app/(tabs)/workouts/[programId]/[workoutId]/log.tsx
 
 import { Ionicons } from "@expo/vector-icons";
+import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -17,8 +18,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-
+import { Swipeable } from 'react-native-gesture-handler';
 
 import BackButton from "@/components/BackButton";
 import Header from "@/components/Header";
@@ -437,173 +437,158 @@ const toggleWarmup = (exId: number, setIdx: number) => {
         />
         <ProgressIndicator completed={progress.completed} total={progress.total} />
 
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.select({
-            ios: "padding",
-            android: undefined,
-          })}
-        >
-            {exTemplates.map((ex, exerciseIndex) => (
-              <View key={ex.id} style={[styles.exerciseCard]}>
-                {/* Exercise Header */}
-                  <View style={styles.exerciseInfo}>
-                    <View style={styles.exerciseHeader}>
-                    <Text style={[styles.exerciseTitle, { color: ui.text }]}>
-                      {ex.name}
-                    </Text>
-                    <View style={[styles.exerciseBadge, { backgroundColor: ui.textMuted + '20' }]}>
-                      <Text style={[styles.exerciseBadgeText, { color: ui.textMuted }]}>
-                        {logs[ex.id]?.filter(s => s.completed).length || 0}/{logs[ex.id]?.length || 0}
-                      </Text>
-                    </View>  
-                    </View>
-                    <Text style={[styles.exerciseSubtitle, { color: ui.textMuted, marginTop: 4 }]}>
-                      Exercise {exerciseIndex + 1} of {exTemplates.length}
-                    </Text>
-                    <View style={[styles.setRestTimer, { backgroundColor: ui.primary, marginTop: 12 }]}>
-                      <Ionicons name="time-outline" size={20} color={ui.text} style={{ marginRight: 4 }} />
-                      <Text style={[styles.exerciseBadgeText, { color: ui.text }]}>Rest Timer: 3 min</Text>
-                    </View>
-                    <TextInput placeholder="Notes" style={[styles.inputContainer, { color: ui.text, marginTop: 12 }]} />
-                  </View>
-                  {/* Sets completed out of total */}        
-
-                {/* Sets List */}
-                <View style={styles.setsContainer}>
-                  {(logs[ex.id] || []).map((entry, idx) => {
-                    // Count non-warmup sets up to this index
-                    const nonWarmCount = logs[ex.id]
-                      .slice(0, idx + 1)
-                      .filter((e) => !e.isWarmup).length;
-                    const displayNumber = entry.isWarmup
-                      ? "W"
-                      : String(nonWarmCount);
-                    const key = `${ex.id}-${idx}`;
-
-                    return (
-                      <Swipeable
-                          key={`${ex.id}-${idx}`}
-                        renderRightActions={() => (
-                          <View style={{ backgroundColor: 'red', justifyContent: 'center'}}>
-                            <Pressable onPress={() => deleteSet(ex.id, idx)}>
-                              <Text style={{ color: 'white', paddingHorizontal: 20 }}>Delete</Text>                                          
-                            </Pressable>
-                          </View>
-                        )}
-                        renderLeftActions={() => (
-                          <View style={{ backgroundColor: 'yellow', justifyContent: 'center'}}>
-                            <Pressable onPress={() => toggleWarmup(ex.id, idx)}>
-                              <Text style={{ color: 'white', paddingHorizontal: 20 }}>Warmup</Text>
-                            </Pressable>
-                          </View>
-                        )}
-                        onSwipeableOpen={(direction) => {
-                          if (direction === 'left') {
-                          } 
-                          else {
-                          }
-                        }}
-                      >
-                          <View
-                            style={[
-                              styles.setRow,
-                              {
-                                backgroundColor: 
-                                  entry.completed
-                                  ? ui.primary
-                                  : ui.bgDark,
-                                flexDirection: "row",
-                                alignItems: "flex-start", // so labels stack above inputs
-                              },
-                            ]}
-                          >
-
-                            {/* Set Number */}
-                            <View style={{ alignItems: "center", width: 40 }}>
-                              <Text style={[styles.label, { color: ui.textMuted }]}>Set</Text>
-                              <Text style={[styles.setNumber, { color: ui.text }]}>
-                                {displayNumber}
-                              </Text>
-                            </View>
-
-                            {/* Previous */}
-                            <View style={{ alignItems: "center", width: 50 }}>
-                              <Text style={[styles.label, { color: ui.textMuted }]}>Previous</Text>
-                              <Text style={[styles.previousText, { color: ui.textMuted }]}>-</Text>
-                            </View>
-
-                            {/* Weight Input */}
-                            <View style={{ alignItems: "center", width: 70 }}>
-                              <Text style={[styles.label, { color: ui.textMuted }]}>Weight</Text>
-                              <EnhancedInput
-                                value={entry.weight}
-                                onChangeText={(t) => updateLogEntry(ex.id, idx, "weight", t)}
-                                placeholder=""
-                                width={70}
-                                suffix="kg"
-                                keyboardType="numeric"
-                              />
-                            </View>
-
-                            {/* Reps Input */}
-                            <View style={{ alignItems: "center", width: 70 }}>
-                              <Text style={[styles.label, { color: ui.textMuted }]}>Reps</Text>
-                              <EnhancedInput
-                                value={entry.reps}
-                                onChangeText={(t) => updateLogEntry(ex.id, idx, "reps", t)}
-                                placeholder=""
-                                width={70}
-                              />
-                            </View>
-
-                            {/* Finish Checkbox */}
-                            <View style={{ alignItems: "center", width: 50 }}>
-                              <Text style={[styles.label, { color: ui.textMuted }]}>Done</Text>
-                              <TouchableOpacity
-                                style={[
-                                  styles.setCheckbox,
-                                  {
-                                    backgroundColor: entry.completed ? ui.primary : 'transparent',
-                                    borderColor: entry.completed ? ui.primary : ui.textMuted + '40',
-                                  },
-                                ]}
-                                onPress={() => toggleSetCompletion(ex.id, idx)}
-                              >
-                                {entry.completed && (
-                                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                                )}
-                              </TouchableOpacity>
-                            </View>
-
-                          </View>
-                        </Swipeable>
-
-                    );
-                  })}
+       <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.select({ ios: "padding", android: undefined })}
+    >
+      <FlashList
+        data={exTemplates}
+        keyExtractor={(ex) => ex.id.toString()}
+        renderItem={({ item: ex, index: exerciseIndex }) => (
+          <View style={styles.exerciseCard}>
+            {/* Exercise Header */}
+            <View style={styles.exerciseInfo}>
+              <View style={styles.exerciseHeader}>
+                <Text style={[styles.exerciseTitle, { color: ui.text }]}>{ex.name}</Text>
+                <View style={[styles.exerciseBadge, { backgroundColor: ui.textMuted + "20" }]}>
+                  <Text style={[styles.exerciseBadgeText, { color: ui.textMuted }]}>
+                    {logs[ex.id]?.filter((s) => s.completed).length || 0}/{logs[ex.id]?.length || 0}
+                  </Text>
                 </View>
-
-                {/* Add Set Button */}
-                <EnhancedButton
-                  title="Add Set"
-                  onPress={() => addSet(ex.id)}
-                  variant="secondary"
-                  style={{borderWidth: 1, borderColor: ui.border, borderRadius: 25}}
-                />
               </View>
-            ))}
-
-                    <View style={styles.finishContainer}>
-              <EnhancedButton
-                title="Finish Workout"
-                onPress={handleSubmit}
-                variant="success"
-                loading={loading}
-                icon="checkmark-circle"
-                style={styles.finishButton}
+              <Text style={[styles.exerciseSubtitle, { color: ui.textMuted, marginTop: 4 }]}>
+                Exercise {exerciseIndex + 1} of {exTemplates.length}
+              </Text>
+              <View style={[styles.setRestTimer, { backgroundColor: ui.primary, marginTop: 12 }]}>
+                <Ionicons name="time-outline" size={20} color={ui.text} style={{ marginRight: 4 }} />
+                <Text style={[styles.exerciseBadgeText, { color: ui.text }]}>Rest Timer: 3 min</Text>
+              </View>
+              <TextInput
+                placeholder="Notes"
+                style={[styles.inputContainer, { color: ui.text, marginTop: 12 }]}
               />
             </View>
-        </KeyboardAvoidingView>
+
+            {/* Sets FlashList */}
+            <FlashList
+              data={logs[ex.id] || []}
+              keyExtractor={(_, idx) => `${ex.id}-${idx}`}
+              renderItem={({ item: entry, index: idx }) => {
+                const nonWarmCount = logs[ex.id]
+                  .slice(0, idx + 1)
+                  .filter((e) => !e.isWarmup).length;
+                const displayNumber = entry.isWarmup ? "W" : String(nonWarmCount);
+
+                return (
+                  <Swipeable
+                    renderRightActions={() => (
+                      <View style={{ backgroundColor: "red", justifyContent: "center" }}>
+                        <Pressable onPress={() => deleteSet(ex.id, idx)}>
+                          <Text style={{ color: "white", paddingHorizontal: 20 }}>Delete</Text>
+                        </Pressable>
+                      </View>
+                    )}
+                    renderLeftActions={() => (
+                      <View style={{ backgroundColor: "yellow", justifyContent: "center" }}>
+                        <Pressable onPress={() => toggleWarmup(ex.id, idx)}>
+                          <Text style={{ color: "white", paddingHorizontal: 20 }}>Warmup</Text>
+                        </Pressable>
+                      </View>
+                    )}
+                  >
+                    <View
+                      style={[
+                        styles.setRow,
+                        {
+                          backgroundColor: entry.completed ? ui.primary : ui.bgDark,
+                          flexDirection: "row",
+                          alignItems: "flex-start",
+                        },
+                      ]}
+                    >
+                      {/* Set Number */}
+                      <View style={{ alignItems: "center", width: 40 }}>
+                        <Text style={[styles.label, { color: ui.textMuted }]}>Set</Text>
+                        <Text style={[styles.setNumber, { color: ui.text }]}>{displayNumber}</Text>
+                      </View>
+
+                      {/* Previous */}
+                      <View style={{ alignItems: "center", width: 50 }}>
+                        <Text style={[styles.label, { color: ui.textMuted }]}>Previous</Text>
+                        <Text style={[styles.previousText, { color: ui.textMuted }]}>-</Text>
+                      </View>
+
+                      {/* Weight */}
+                      <View style={{ alignItems: "center", width: 70 }}>
+                        <Text style={[styles.label, { color: ui.textMuted }]}>Weight</Text>
+                        <EnhancedInput
+                          value={entry.weight}
+                          onChangeText={(t) => updateLogEntry(ex.id, idx, "weight", t)}
+                          width={70}
+                          suffix="kg"
+                          placeholder="0"
+                        />
+                      </View>
+
+                      {/* Reps */}
+                      <View style={{ alignItems: "center", width: 70 }}>
+                        <Text style={[styles.label, { color: ui.textMuted }]}>Reps</Text>
+                        <EnhancedInput
+                          value={entry.reps}
+                          onChangeText={(t) => updateLogEntry(ex.id, idx, "reps", t)}
+                          width={70}
+                          placeholder="0"
+                        />
+                      </View>
+
+                      {/* Done */}
+                      <View style={{ alignItems: "center", width: 50 }}>
+                        <Text style={[styles.label, { color: ui.textMuted }]}>Done</Text>
+                        <TouchableOpacity
+                          style={[
+                            styles.setCheckbox,
+                            {
+                              backgroundColor: entry.completed ? ui.primary : "transparent",
+                              borderColor: entry.completed ? ui.primary : ui.textMuted + "40",
+                            },
+                          ]}
+                          onPress={() => toggleSetCompletion(ex.id, idx)}
+                        >
+                          {entry.completed && (
+                            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </Swipeable>
+                );
+              }}
+              estimatedItemSize={60}
+            />
+
+            <EnhancedButton
+              title="Add Set"
+              onPress={() => addSet(ex.id)}
+              variant="secondary"
+              style={{ borderWidth: 1, borderColor: ui.border, borderRadius: 25 }}
+            />
+          </View>
+        )}
+        estimatedItemSize={200}
+        ListFooterComponent={
+          <View style={styles.finishContainer}>
+            <EnhancedButton
+              title="Finish Workout"
+              onPress={handleSubmit}
+              variant="success"
+              loading={loading}
+              icon="checkmark-circle"
+              style={styles.finishButton}
+            />
+          </View>
+        }
+      />
+    </KeyboardAvoidingView>
       </ScreenWrapper>
   );
 }

@@ -55,16 +55,6 @@ export default function MacroCircle({ protein, carbs, fat, size = 120 }: Props) 
                 );
               }}
     />
-    <View
-              style={{
-                flexDirection: 'row',
-                gap: 8,
-                marginTop: 12,
-              }}>
-              {renderLegend('Protein', '#ff595e')}
-              {renderLegend('Carbs', '#1982c4')}
-              {renderLegend('Fat', '#ffca3a')}
-            </View>
     </View>
   );
 }

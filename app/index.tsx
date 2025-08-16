@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function Index() {
-  const [initialRoute, setInitialRoute] = useState<'/onboarding' | '/(auth)' | '/(tabs)' | null>(null);
+  const [initialRoute, setInitialRoute] = useState<'/onboarding' | '/(auth)/sign-in' | '/(tabs)' | null>(null);
 
   useEffect(() => {
     async function determineRoute() {
@@ -23,7 +23,7 @@ export default function Index() {
       if (session) {
         setInitialRoute('/(tabs)');
       } else {
-        setInitialRoute('/(auth)');
+        setInitialRoute('/(auth)/sign-in');
       }
     }
 

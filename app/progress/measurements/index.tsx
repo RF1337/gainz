@@ -5,7 +5,7 @@ import ScreenWrapper from "@/components/ScreenWrapper";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react"; // NEW: useEffect
 import {
   ActivityIndicator,
   Alert,
@@ -44,9 +44,85 @@ export default function MeasurementsScreen() {
     calves: "",
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);           // save-loading
+  const [initialLoading, setInitialLoading] = useState(true); // NEW: first load spinner
   const [pickerVisible, setPickerVisible] = useState(false);
   const [selectedKey, setSelectedKey] = useState<keyof Measurements | null>(null);
+
+  // NEW: helper to normalize numbers -> string
+  const toStr = (n: number | null | undefined) =>
+    n === null || n === undefined ? "" : String(n);
+
+  // NEW: get local YYYY-MM-DD (stabil ift. time zones/DST)
+  const localYMD = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const day = d.getDate();
+    return new Date(Date.UTC(y, m, day)).toISOString().slice(0, 10);
+  };
+
+  // NEW: load today's or latest measurement into state
+  useEffect(() => {
+    (async () => {
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+        if (userError || !user) {
+          setInitialLoading(false);
+          return;
+        }
+
+        const today = localYMD();
+
+        // Prøv først dagens række
+        let { data, error } = await supabase
+          .from("user_measurements")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("date", today)
+          .maybeSingle();
+
+        // Hvis ingen, så tag seneste måling
+        if ((!data || error) && !error?.message?.includes("permission denied")) {
+          const res = await supabase
+            .from("user_measurements")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          data = res.data ?? null;
+          error = res.error ?? null;
+        }
+
+        if (error) {
+          // typisk RLS select-police mangler
+          console.warn("Load measurements error:", error.message);
+        }
+
+        if (data) {
+          setMeasurements({
+            neck: toStr(data.neck_cm),
+            shoulders: toStr(data.shoulders_cm),
+            chest: toStr(data.chest_cm),
+            biceps: toStr(data.biceps_cm),
+            forearm: toStr(data.forearm_cm),
+            waist: toStr(data.waist_cm),
+            hips: toStr(data.hips_cm),
+            thighs: toStr(data.thighs_cm),
+            calves: toStr(data.calves_cm),
+          });
+        }
+      } catch (e) {
+        console.warn("Load measurements exception:", e);
+      } finally {
+        setInitialLoading(false);
+      }
+    })();
+  }, []);
 
   const handleChange = (key: keyof Measurements, value: string) => {
     setMeasurements((prev) => ({ ...prev, [key]: value }));
@@ -65,11 +141,11 @@ export default function MeasurementsScreen() {
         return;
       }
 
-      const { error } = await supabase.from("measurements").upsert(
+      const { error } = await supabase.from("user_measurements").upsert(
         [
           {
             user_id: user.id,
-            date: new Date().toISOString().split("T")[0],
+            date: localYMD(), // NEW: use stable local day
             neck_cm: parseFloat(measurements.neck) || 0,
             shoulders_cm: parseFloat(measurements.shoulders) || 0,
             chest_cm: parseFloat(measurements.chest) || 0,
@@ -130,14 +206,14 @@ export default function MeasurementsScreen() {
     if (!selectedKey) return "";
     const labels = {
       neck: "neck",
-      shoulders: "shoulders", 
+      shoulders: "shoulders",
       chest: "chest",
       biceps: "biceps",
       forearm: "forearm",
       waist: "waist",
       hips: "hips",
       thighs: "thighs",
-      calves: "calves"
+      calves: "calves",
     };
     return labels[selectedKey];
   };
@@ -150,7 +226,7 @@ export default function MeasurementsScreen() {
       <ScreenWrapper>
         <Header leftIcon={<BackButton />} title="Body Measurements" />
 
-        {loading && (
+        {(initialLoading || loading) && ( // NEW: show spinner for first load or saving
           <ActivityIndicator size="large" color={ui.primary} style={{ margin: 16 }} />
         )}
 
@@ -195,10 +271,6 @@ export default function MeasurementsScreen() {
         <MeasurementPickerContent
           title={`Select ${getSelectedLabel()} measurement`}
           initialValue={getCurrentValue()}
-          onValueChange={(value) => {
-            // Optional: Real-time preview while scrolling
-            console.log(`${selectedKey} changing to:`, value);
-          }}
           onConfirm={handleConfirmMeasurement}
           onDismiss={handleDismissPicker}
         />

@@ -62,7 +62,7 @@ export default function TabLayout() {
           options={{
             title: 'Home',
             tabBarIcon: ({ focused, size }) => (
-              <AnimatedTabIcon name={focused ? 'home' : 'home-outline'} color={ui.text} size={size} />
+              <AnimatedTabIcon name={focused ? 'home' : 'home-outline'} color={ui.textMuted} size={size} />
             ),
           }}
         />
@@ -72,7 +72,7 @@ export default function TabLayout() {
           options={{
             title: 'Explore',
             tabBarIcon: ({ focused, size }) => (
-              <AnimatedTabIcon name={focused ? 'compass' : 'compass-outline'} color={ui.text} size={size} />
+              <AnimatedTabIcon name={focused ? 'compass' : 'compass-outline'} color={ui.textMuted} size={size} />
             ),
           }}
         />
@@ -100,7 +100,7 @@ export default function TabLayout() {
           options={{
             title: 'Progress',
             tabBarIcon: ({ focused, size }) => (
-              <AnimatedTabIcon name={focused ? 'trending-up' : 'trending-up-outline'} color={ui.text} size={size} />
+              <AnimatedTabIcon name={focused ? 'trending-up' : 'trending-up-outline'} color={ui.textMuted} size={size} />
             ),
           }}
         />
@@ -110,7 +110,7 @@ export default function TabLayout() {
           options={{
             title: 'Profile',
             tabBarIcon: ({ focused, size }) => (
-              <AnimatedTabIcon name={focused ? 'person-circle' : 'person-circle-outline'} color={ui.text} size={size} />
+              <AnimatedTabIcon name={focused ? 'person-circle' : 'person-circle-outline'} color={ui.textMuted} size={size} />
             ),
           }}
         />
