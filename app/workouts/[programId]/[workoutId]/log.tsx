@@ -1,7 +1,6 @@
 // app/(tabs)/workouts/[programId]/[workoutId]/log.tsx
 
 import { Ionicons } from "@expo/vector-icons";
-import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -11,14 +10,13 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-import { Swipeable } from 'react-native-gesture-handler';
+import { FlatList, Pressable, Swipeable } from "react-native-gesture-handler";
 
 import BackButton from "@/components/BackButton";
 import Header from "@/components/Header";
@@ -26,10 +24,11 @@ import ScreenWrapper from "@/components/ScreenWrapper";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/theme/ThemeProvider";
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get("window");
 
 type ExerciseTemplate = {
   id: number;
+  exercise_id: string;
   name: string;
   default_sets: number;
   default_reps: number;
@@ -43,16 +42,15 @@ type ExerciseLogEntry = {
   completed: boolean;
 };
 
-// Enhanced Button Component
 const EnhancedButton: React.FC<{
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'success';
+  variant?: "primary" | "secondary" | "success";
   disabled?: boolean;
   loading?: boolean;
   icon?: string;
   style?: any;
-}> = ({ title, onPress, variant = 'primary', disabled, loading, icon, style }) => {
+}> = ({ title, onPress, variant = "primary", disabled, loading, icon, style }) => {
   const { ui } = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -73,10 +71,7 @@ const EnhancedButton: React.FC<{
   return (
     <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
       <TouchableOpacity
-        style={[
-          styles.enhancedButton,
-          disabled && { opacity: 0.6 },
-        ]}
+        style={[styles.enhancedButton, disabled && { opacity: 0.6 }]}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -95,9 +90,7 @@ const EnhancedButton: React.FC<{
                 style={{ marginRight: 8 }}
               />
             )}
-            <Text style={[styles.buttonText, { color: ui.text }]}>
-              {title}
-            </Text>
+            <Text style={[styles.buttonText, { color: ui.text }]}>{title}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -105,15 +98,21 @@ const EnhancedButton: React.FC<{
   );
 };
 
-// Enhanced Input Component
 const EnhancedInput: React.FC<{
   value: string;
   onChangeText: (text: string) => void;
   placeholder: string;
   width?: number;
-  keyboardType?: 'numeric' | 'default';
+  keyboardType?: "numeric" | "default";
   suffix?: string;
-}> = ({ value, onChangeText, placeholder, width = 70, keyboardType = 'numeric', suffix }) => {
+}> = ({
+  value,
+  onChangeText,
+  placeholder,
+  width = 70,
+  keyboardType = "numeric",
+  suffix,
+}) => {
   const { ui } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
 
@@ -122,13 +121,10 @@ const EnhancedInput: React.FC<{
       <TextInput
         style={[
           styles.enhancedInput,
-          {
-            borderColor: isFocused ? ui.text : ui.border,
-            color: ui.text,
-          },
+          { borderColor: isFocused ? ui.text : ui.border, color: ui.text },
         ]}
         placeholder={placeholder}
-        placeholderTextColor={ui.textMuted + '80'}
+        placeholderTextColor={ui.textMuted + "80"}
         keyboardType={keyboardType}
         value={value}
         onChangeText={onChangeText}
@@ -143,21 +139,22 @@ const EnhancedInput: React.FC<{
   );
 };
 
-// Progress Indicator Component
-const ProgressIndicator: React.FC<{ completed: number; total: number }> = ({ completed, total }) => {
+const ProgressIndicator: React.FC<{ completed: number; total: number }> = ({
+  completed,
+  total,
+}) => {
   const { ui } = useTheme();
   const progress = total > 0 ? completed / total : 0;
 
   return (
     <View style={styles.progressContainer}>
-      <View style={[styles.progressBar, { backgroundColor: ui.textMuted + '20' }]}>
+      <View
+        style={[styles.progressBar, { backgroundColor: ui.textMuted + "20" }]}
+      >
         <View
           style={[
             styles.progressFill,
-            {
-              width: `${progress * 100}%`,
-              backgroundColor: ui.primary,
-            },
+            { width: `${progress * 100}%`, backgroundColor: ui.primary },
           ]}
         />
       </View>
@@ -170,107 +167,109 @@ const ProgressIndicator: React.FC<{ completed: number; total: number }> = ({ com
 
 export default function WorkoutLogScreen() {
   const { ui } = useTheme();
-
-  const { programId, workoutId } = useLocalSearchParams<{ programId: string; workoutId: string }>();
-
+  const { programId, workoutId } =
+    useLocalSearchParams<{ programId: string; workoutId: string }>();
   const router = useRouter();
-  if (!workoutId || typeof workoutId !== "string") return null; // UUID string
-
 
   const [exTemplates, setExTemplates] = useState<ExerciseTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionExercises, setSessionExercises] = useState<
+    Record<number, string>
+  >({});
   const [logs, setLogs] = useState<Record<number, ExerciseLogEntry[]>>({});
-  const [currentExercise, setCurrentExercise] = useState<number>(0);
   const [restTimeLeft, setRestTimeLeft] = useState<number | null>(null);
   const restTimeLeftRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Keep track of open swipeables
-
   useEffect(() => {
     const initialize = async () => {
-      // Create a new workout log row
       const {
-  data: { user },
-  error: userError
-} = await supabase.auth.getUser();
-
-if (userError || !user) {
-  Alert.alert("Error", "User not authenticated.");
-  router.back();
-  return;
-}
-
-const { data: logData, error: logError } = await supabase
-  .from("user_workouts")
-  .insert([
-    {
-      workout_id: workoutId,
-      user_id: user.id // 👈 Add this line
-    }
-  ])
-  .select("id")
-  .single();
-
-
-      if (logError || !logData) {
-        console.error("Error creating workout log:", logError?.message);
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) {
+        Alert.alert("Error", "User not authenticated.");
         router.back();
         return;
       }
-      setSessionId(logData.id);
 
-      // Fetch exercise templates
+      // 1. create workout_session
+      const { data: session, error: sessionError } = await supabase
+        .from("workout_sessions")
+        .insert([{ workout_id: workoutId, user_id: user.id }])
+        .select("id")
+        .single();
+
+      if (sessionError || !session) {
+        console.error("Error creating workout session:", sessionError?.message);
+        router.back();
+        return;
+      }
+      setSessionId(session.id);
+
+      // 2. fetch workout_exercises
       const { data: exData, error: exError } = await supabase
         .from("workout_exercises")
-        .select("id, default_sets, default_reps, order_index")
+        .select("id, exercise_id, default_sets, default_reps, order_index, exercises(name)")
         .eq("workout_id", workoutId)
         .order("order_index", { ascending: true });
 
       if (exError || !exData) {
-        console.error(
-          "Error fetching exercise templates:",
-          exError?.message
-        );
-        setExTemplates([]);
-      } else {
-        setExTemplates(exData);
-
-        // Initialize logs state
-        const initLogs: Record<number, ExerciseLogEntry[]> = {};
-        exData.forEach((ex) => {
-          initLogs[ex.id] = Array(ex.default_sets)
-            .fill(0)
-            .map(() => ({ weight: "", reps: "", isWarmup: false, completed: false }));
-        });
-        setLogs(initLogs);
+        console.error("Error fetching workout_exercises:", exError?.message);
+        setLoading(false);
+        return;
       }
 
+      // 3. create workout_session_exercises
+      const toInsert = exData.map((ex) => ({
+        workout_session_id: session.id,
+        workout_exercise_id: ex.id,
+        exercise_id: ex.exercise_id,
+        position: ex.order_index,
+      }));
+
+      const { data: sessionExData, error: sessionExError } = await supabase
+        .from("workout_session_exercises")
+        .insert(toInsert)
+        .select("id, workout_exercise_id");
+
+      if (sessionExError || !sessionExData) {
+        console.error("Error creating session exercises:", sessionExError?.message);
+        setLoading(false);
+        return;
+      }
+
+      const exMap: Record<number, string> = {};
+      sessionExData.forEach((row) => {
+        exMap[row.workout_exercise_id] = row.id;
+      });
+      setSessionExercises(exMap);
+
+      // init logs
+      const initLogs: Record<number, ExerciseLogEntry[]> = {};
+      exData.forEach((ex) => {
+        initLogs[ex.id] = Array(ex.default_sets)
+          .fill(0)
+          .map(() => ({
+            weight: "",
+            reps: "",
+            isWarmup: false,
+            completed: false,
+          }));
+      });
+      setExTemplates(
+        exData.map((ex) => ({
+          ...ex,
+          name: (ex as any).exercises.name,
+        }))
+      );
+      setLogs(initLogs);
       setLoading(false);
     };
 
     initialize();
-  }, [workoutId, router]);
+  }, [workoutId]);
 
-  if (loading || sessionId === null) {
-    return (
-      <View style={[styles.centered, { backgroundColor: ui.bgDark }]}>
-        <ActivityIndicator size="large" color={ui.primary} />
-        <Text style={[styles.loadingText, { color: ui.textMuted }]}>
-          Loading workout...
-        </Text>
-      </View>
-    );
-  }
-
-  // Calculate total progress
-  const getTotalProgress = () => {
-    const allSets = Object.values(logs).flat();
-    const completedSets = allSets.filter(set => set.completed).length;
-    return { completed: completedSets, total: allSets.length };
-  };
-
-  // Update a single field in a log entry
   const updateLogEntry = (
     exId: number,
     setIdx: number,
@@ -284,65 +283,23 @@ const { data: logData, error: logError } = await supabase
     });
   };
 
-  // Toggle set completion
   const toggleSetCompletion = (exId: number, setIdx: number) => {
     setLogs((prev) => {
       const updated = [...(prev[exId] || [])];
       const currentSet = updated[setIdx];
-      updated[setIdx] = {
-        ...currentSet,
-        completed: !currentSet.completed,
-      };
+      updated[setIdx] = { ...currentSet, completed: !currentSet.completed };
       return { ...prev, [exId]: updated };
     });
-
-    // Start rest timer when a set is completed
-    const wasCompleted = logs[exId]?.[setIdx]?.completed;
-    if (!wasCompleted) {
-      startRestTimer(60); // 60 seconds rest
-    }
-
-    // Haptic feedback
-    if (Platform.OS === 'ios') {
-      // Haptic.impactAsync(Haptic.ImpactFeedbackStyle.Medium);
-    }
   };
 
-const startRestTimer = (seconds: number) => {
-  if (restTimeLeftRef.current) {
-    clearInterval(restTimeLeftRef.current);
-  }
-
-  setRestTimeLeft(seconds);
-
-  restTimeLeftRef.current = setInterval(() => {
-    setRestTimeLeft((prev: number | null) => {
-      if (prev === null || prev <= 1) {
-        clearInterval(restTimeLeftRef.current!);
-        return null;
-      }
-      return prev - 1;
+  const toggleWarmup = (exId: number, setIdx: number) => {
+    setLogs((prev) => {
+      const updated = [...(prev[exId] || [])];
+      updated[setIdx] = { ...updated[setIdx], isWarmup: !updated[setIdx].isWarmup };
+      return { ...prev, [exId]: updated };
     });
-  }, 1000);
-};
+  };
 
-
-
-  // Toggle warmup flag
-const toggleWarmup = (exId: number, setIdx: number) => {
-  setLogs((prev) => {
-    console.log('Prev logs:', prev);
-    const updated = [...(prev[exId] || [])];
-    updated[setIdx] = {
-      ...updated[setIdx],
-      isWarmup: !updated[setIdx].isWarmup,
-    };
-    console.log('Updated sets:', updated);
-    return { ...prev, [exId]: updated };
-  });
-};
-
-  // Delete a set
   const deleteSet = (exId: number, setIdx: number) => {
     setLogs((prev) => {
       const updated = [...(prev[exId] || [])];
@@ -351,7 +308,6 @@ const toggleWarmup = (exId: number, setIdx: number) => {
     });
   };
 
-  // Add a new set row
   const addSet = (exId: number) => {
     setLogs((prev) => {
       const existing = prev[exId] || [];
@@ -365,335 +321,226 @@ const toggleWarmup = (exId: number, setIdx: number) => {
     });
   };
 
-  // Submit logs to database
   const handleSubmit = async () => {
-  if (!sessionId) return;
-  setLoading(true);
+    if (!sessionId) return;
+    setLoading(true);
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    Alert.alert("Error", "User not authenticated.");
-    setLoading(false);
-    return;
-  }
+    const setRows = Object.entries(logs).flatMap(([workoutExIdStr, entries]) => {
+      const workoutExId = Number(workoutExIdStr);
+      const sessionExId = sessionExercises[workoutExId];
+      if (!sessionExId) return [];
 
-  // Hjælpere til sikker parsing
-  const toInt = (v: string) => {
-    const n = parseInt(v, 10);
-    return Number.isFinite(n) ? n : 0; // skift til: return Number.isFinite(n) ? n : null;
-  };
+      return entries.map((entry, idx) => ({
+        workout_session_exercise_id: sessionExId,
+        set_number: idx + 1,
+        weight_kg: entry.weight ? parseFloat(entry.weight) : null,
+        reps: entry.reps ? parseInt(entry.reps, 10) : null,
+        rir: null,
+        note: null,
+      }));
+    });
 
-  const toFloat = (v: string) => {
-    const n = parseFloat(v);
-    return Number.isFinite(n) ? n : 0; // skift til: return Number.isFinite(n) ? n : null;
-  };
+    const { error } = await supabase
+      .from("workout_session_sets")
+      .insert(setRows);
 
-  // Byg payload
-  const toInsert = Object.entries(logs).flatMap(([exIdStr, entries]) => {
-    const exercise_template_id = Number(exIdStr);
-    if (!Number.isInteger(exercise_template_id)) {
-      // Ignorer nøgler der ikke kan mappes til et heltal
-      return [];
+    if (error) {
+      console.error("Error saving sets:", error.message);
+      Alert.alert("Error", "Failed to save workout.");
+      setLoading(false);
+      return;
     }
 
-    return entries.map((entry, idx) => ({
-      user_id: user.id,                  // uuid
-      workout_log_id: sessionId!,        // uuid (sørg for at sessionId er string og ikke null her)
-      exercise_template_id,              // int (FK til workout_exercises.id)
-      set_number: idx + 1,               // int
-      reps_performed: toInt(entry.reps), // int (eller null hvis nullable)
-      weight_used: toFloat(entry.weight),// numeric/float (eller null hvis nullable)
-      is_warmup: entry.isWarmup,         // boolean
-    }));
-  });
+    router.replace(`/workouts/${programId}/${workoutId}`);
+  };
 
-  const { error: insertError } = await supabase
-    .from("exercise_logs")
-    .insert(toInsert);
+  const progress = (() => {
+    const allSets = Object.values(logs).flat();
+    const completedSets = allSets.filter((s) => s.completed).length;
+    return { completed: completedSets, total: allSets.length };
+  })();
 
-  if (insertError) {
-    console.error("Error inserting exercise logs:", insertError.message);
-    Alert.alert("Error", "Failed to save workout. Please try again.");
-    setLoading(false);
-    return;
+  if (loading || sessionId === null) {
+    return (
+      <View style={[styles.centered, { backgroundColor: ui.bgDark }]}>
+        <ActivityIndicator size="large" color={ui.primary} />
+        <Text style={[styles.loadingText, { color: ui.textMuted }]}>
+          Loading workout...
+        </Text>
+      </View>
+    );
   }
 
-  router.replace(`/workouts/${programId}/${workoutId}`);
-};
-
-  const progress = getTotalProgress();
-
   return (
-      <ScreenWrapper>
-        <Header 
-          leftIcon={<BackButton />}
-          title={""}
-          rightIcon={restTimeLeft !== null && (
-                  <View style={[styles.restTimer, { backgroundColor: ui.primary }]}>
-                    <Ionicons name="time-outline" size={20} color={ui.text} style={{marginRight: 4}}/>
-                    <Text style={[styles.exerciseBadgeText, { color: ui.text }]}>{restTimeLeft}s</Text>
-                  </View>
-                )}
-        />
-        <ProgressIndicator completed={progress.completed} total={progress.total} />
-
-       <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.select({ ios: "padding", android: undefined })}
-    >
-      <FlashList
-        data={exTemplates}
-        keyExtractor={(ex) => ex.id.toString()}
-        renderItem={({ item: ex, index: exerciseIndex }) => (
-          <View style={styles.exerciseCard}>
-            {/* Exercise Header */}
-            <View style={styles.exerciseInfo}>
-              <View style={styles.exerciseHeader}>
-                <Text style={[styles.exerciseTitle, { color: ui.text }]}>{ex.name}</Text>
-                <View style={[styles.exerciseBadge, { backgroundColor: ui.textMuted + "20" }]}>
-                  <Text style={[styles.exerciseBadgeText, { color: ui.textMuted }]}>
-                    {logs[ex.id]?.filter((s) => s.completed).length || 0}/{logs[ex.id]?.length || 0}
+    <ScreenWrapper>
+      <Header leftIcon={<BackButton />} title={""} />
+      <ProgressIndicator completed={progress.completed} total={progress.total} />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.select({ ios: "padding", android: undefined })}
+      >
+        <FlatList
+          data={exTemplates}
+          keyExtractor={(ex) => ex.id.toString()}
+          renderItem={({ item: ex, index: exerciseIndex }) => (
+            <View style={styles.exerciseCard}>
+              <View style={styles.exerciseInfo}>
+                <View style={styles.exerciseHeader}>
+                  <Text
+                    style={[styles.exerciseTitle, { color: ui.text }]}
+                  >
+                    {ex.name}
                   </Text>
+                  <View
+                    style={[
+                      styles.exerciseBadge,
+                      { backgroundColor: ui.textMuted + "20" },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.exerciseBadgeText, { color: ui.textMuted }]}
+                    >
+                      {logs[ex.id]?.filter((s) => s.completed).length || 0}/
+                      {logs[ex.id]?.length || 0}
+                    </Text>
+                  </View>
                 </View>
               </View>
-              <Text style={[styles.exerciseSubtitle, { color: ui.textMuted, marginTop: 4 }]}>
-                Exercise {exerciseIndex + 1} of {exTemplates.length}
-              </Text>
-              <View style={[styles.setRestTimer, { backgroundColor: ui.primary, marginTop: 12 }]}>
-                <Ionicons name="time-outline" size={20} color={ui.text} style={{ marginRight: 4 }} />
-                <Text style={[styles.exerciseBadgeText, { color: ui.text }]}>Rest Timer: 3 min</Text>
-              </View>
-              <TextInput
-                placeholder="Notes"
-                style={[styles.inputContainer, { color: ui.text, marginTop: 12 }]}
+
+              <FlatList
+                data={logs[ex.id] || []}
+                keyExtractor={(_, idx) => `${ex.id}-${idx}`}
+                renderItem={({ item: entry, index: idx }) => {
+                  const nonWarmCount = logs[ex.id]
+                    .slice(0, idx + 1)
+                    .filter((e) => !e.isWarmup).length;
+                  const displayNumber = entry.isWarmup ? "W" : String(nonWarmCount);
+
+                  return (
+                    <Swipeable
+                      renderRightActions={() => (
+                        <Pressable
+                          onPress={() => deleteSet(ex.id, idx)}
+                          style={{ backgroundColor: "red", justifyContent: "center" }}
+                        >
+                          <Text style={{ color: "white", padding: 16 }}>Delete</Text>
+                        </Pressable>
+                      )}
+                      renderLeftActions={() => (
+                        <Pressable
+                          onPress={() => toggleWarmup(ex.id, idx)}
+                          style={{ backgroundColor: "orange", justifyContent: "center" }}
+                        >
+                          <Text style={{ color: "white", padding: 16 }}>Warmup</Text>
+                        </Pressable>
+                      )}
+                    >
+                      <View
+                        style={[
+                          styles.setRow,
+                          {
+                            backgroundColor: entry.completed
+                              ? ui.primary
+                              : ui.bgDark,
+                          },
+                        ]}
+                      >
+                        <View style={{ alignItems: "center", width: 40 }}>
+                          <Text style={[styles.label, { color: ui.textMuted }]}>Set</Text>
+                          <Text style={[styles.setNumber, { color: ui.text }]}>
+                            {displayNumber}
+                          </Text>
+                        </View>
+                        <View style={{ alignItems: "center", width: 70 }}>
+                          <Text style={[styles.label, { color: ui.textMuted }]}>Weight</Text>
+                          <EnhancedInput
+                            value={entry.weight}
+                            onChangeText={(t) => updateLogEntry(ex.id, idx, "weight", t)}
+                            width={70}
+                            suffix="kg"
+                            placeholder="0"
+                          />
+                        </View>
+                        <View style={{ alignItems: "center", width: 70 }}>
+                          <Text style={[styles.label, { color: ui.textMuted }]}>Reps</Text>
+                          <EnhancedInput
+                            value={entry.reps}
+                            onChangeText={(t) => updateLogEntry(ex.id, idx, "reps", t)}
+                            width={70}
+                            placeholder="0"
+                          />
+                        </View>
+                        <View style={{ alignItems: "center", width: 50 }}>
+                          <Text style={[styles.label, { color: ui.textMuted }]}>Done</Text>
+                          <TouchableOpacity
+                            style={[
+                              styles.setCheckbox,
+                              {
+                                backgroundColor: entry.completed
+                                  ? ui.primary
+                                  : "transparent",
+                              },
+                            ]}
+                            onPress={() => toggleSetCompletion(ex.id, idx)}
+                          >
+                            {entry.completed && (
+                              <Ionicons name="checkmark" size={16} color="#FFF" />
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </Swipeable>
+                  );
+                }}
+              />
+              <EnhancedButton
+                title="Add Set"
+                onPress={() => addSet(ex.id)}
+                variant="secondary"
+                style={{ borderWidth: 1, borderColor: ui.border, borderRadius: 25 }}
               />
             </View>
-
-            {/* Sets FlashList */}
-            <FlashList
-              data={logs[ex.id] || []}
-              keyExtractor={(_, idx) => `${ex.id}-${idx}`}
-              renderItem={({ item: entry, index: idx }) => {
-                const nonWarmCount = logs[ex.id]
-                  .slice(0, idx + 1)
-                  .filter((e) => !e.isWarmup).length;
-                const displayNumber = entry.isWarmup ? "W" : String(nonWarmCount);
-
-                return (
-                  <Swipeable
-                    renderRightActions={() => (
-                      <View style={{ backgroundColor: "red", justifyContent: "center" }}>
-                        <Pressable onPress={() => deleteSet(ex.id, idx)}>
-                          <Text style={{ color: "white", paddingHorizontal: 20 }}>Delete</Text>
-                        </Pressable>
-                      </View>
-                    )}
-                    renderLeftActions={() => (
-                      <View style={{ backgroundColor: "yellow", justifyContent: "center" }}>
-                        <Pressable onPress={() => toggleWarmup(ex.id, idx)}>
-                          <Text style={{ color: "white", paddingHorizontal: 20 }}>Warmup</Text>
-                        </Pressable>
-                      </View>
-                    )}
-                  >
-                    <View
-                      style={[
-                        styles.setRow,
-                        {
-                          backgroundColor: entry.completed ? ui.primary : ui.bgDark,
-                          flexDirection: "row",
-                          alignItems: "flex-start",
-                        },
-                      ]}
-                    >
-                      {/* Set Number */}
-                      <View style={{ alignItems: "center", width: 40 }}>
-                        <Text style={[styles.label, { color: ui.textMuted }]}>Set</Text>
-                        <Text style={[styles.setNumber, { color: ui.text }]}>{displayNumber}</Text>
-                      </View>
-
-                      {/* Previous */}
-                      <View style={{ alignItems: "center", width: 50 }}>
-                        <Text style={[styles.label, { color: ui.textMuted }]}>Previous</Text>
-                        <Text style={[styles.previousText, { color: ui.textMuted }]}>-</Text>
-                      </View>
-
-                      {/* Weight */}
-                      <View style={{ alignItems: "center", width: 70 }}>
-                        <Text style={[styles.label, { color: ui.textMuted }]}>Weight</Text>
-                        <EnhancedInput
-                          value={entry.weight}
-                          onChangeText={(t) => updateLogEntry(ex.id, idx, "weight", t)}
-                          width={70}
-                          suffix="kg"
-                          placeholder="0"
-                        />
-                      </View>
-
-                      {/* Reps */}
-                      <View style={{ alignItems: "center", width: 70 }}>
-                        <Text style={[styles.label, { color: ui.textMuted }]}>Reps</Text>
-                        <EnhancedInput
-                          value={entry.reps}
-                          onChangeText={(t) => updateLogEntry(ex.id, idx, "reps", t)}
-                          width={70}
-                          placeholder="0"
-                        />
-                      </View>
-
-                      {/* Done */}
-                      <View style={{ alignItems: "center", width: 50 }}>
-                        <Text style={[styles.label, { color: ui.textMuted }]}>Done</Text>
-                        <TouchableOpacity
-                          style={[
-                            styles.setCheckbox,
-                            {
-                              backgroundColor: entry.completed ? ui.primary : "transparent",
-                              borderColor: entry.completed ? ui.primary : ui.textMuted + "40",
-                            },
-                          ]}
-                          onPress={() => toggleSetCompletion(ex.id, idx)}
-                        >
-                          {entry.completed && (
-                            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                          )}
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </Swipeable>
-                );
-              }}
-              estimatedItemSize={60}
-            />
-
-            <EnhancedButton
-              title="Add Set"
-              onPress={() => addSet(ex.id)}
-              variant="secondary"
-              style={{ borderWidth: 1, borderColor: ui.border, borderRadius: 25 }}
-            />
-          </View>
-        )}
-        estimatedItemSize={200}
-        ListFooterComponent={
-          <View style={styles.finishContainer}>
-            <EnhancedButton
-              title="Finish Workout"
-              onPress={handleSubmit}
-              variant="success"
-              loading={loading}
-              icon="checkmark-circle"
-              style={styles.finishButton}
-            />
-          </View>
-        }
-      />
-    </KeyboardAvoidingView>
-      </ScreenWrapper>
+          )}
+          ListFooterComponent={
+            <View style={styles.finishContainer}>
+              <EnhancedButton
+                title="Finish Workout"
+                onPress={handleSubmit}
+                variant="success"
+                loading={loading}
+                icon="checkmark-circle"
+                style={styles.finishButton}
+              />
+            </View>
+          }
+        />
+      </KeyboardAvoidingView>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  progressContainer: {
-    alignItems: 'center',
-  },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { marginTop: 16, fontSize: 16 },
+  progressContainer: { alignItems: "center" },
   progressBar: {
     width: screenWidth - 32,
     height: 4,
     borderRadius: 2,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressText: {
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  exerciseCard: {
-    marginBottom: 24,
-  },
-  exerciseHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  exerciseInfo: {
-    flex: 1,
-  },
-  exerciseTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  exerciseSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  exerciseBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  setRestTimer: {
-  flexDirection: 'row', 
-  alignItems: 'center', 
-  alignSelf: 'flex-start',
-  paddingHorizontal: 10,
-  paddingVertical: 4,
-  borderRadius: 20,
-  },
-  restTimer: {
-  flexDirection: 'row', 
-  alignItems: 'center', 
-  alignSelf: 'flex-start',
-  paddingHorizontal: 10,
-  paddingVertical: 4,
-  borderRadius: 20,
-  },
-  restTimerText: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  exerciseBadgeText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  setsContainer: {
-    marginBottom: 16,
-  },
+  progressFill: { height: "100%", borderRadius: 2 },
+  progressText: { marginTop: 8, fontSize: 14, fontWeight: "500" },
+  exerciseCard: { marginBottom: 24 },
+  exerciseHeader: { flexDirection: "row", justifyContent: "space-between" },
+  exerciseInfo: { flex: 1 },
+  exerciseTitle: { fontSize: 18, fontWeight: "700" },
+  exerciseBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  exerciseBadgeText: { fontSize: 14, fontWeight: "600" },
   setRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 12,
     borderWidth: 1,
   },
@@ -702,88 +549,30 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  setNumber: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  previousContainer: {
-    width: 50,
-    alignItems: 'center',
-  },
-  previousText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  inputContainer: {
-    fontSize: 16,
-  },
-  enhancedInput: {
-    borderWidth: 2,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  inputSuffix: {
-    position: 'absolute',
-    right: 4,
-    top: 10,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  indicatorsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  warmupBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
+  setNumber: { fontSize: 16, fontWeight: "600" },
+  label: { fontSize: 12, fontWeight: "500", marginBottom: 4 },
   enhancedButton: {
+    paddingHorizontal: 20,
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  addSetButton: {
-    borderWidth: 1,
     borderRadius: 25,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#333",
+    marginVertical: 8,
   },
-  finishContainer: {
-    marginTop: 24,
+  buttonText: { fontSize: 16, fontWeight: "600" },
+  buttonContent: { flexDirection: "row", alignItems: "center" },
+  enhancedInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 16,
+    textAlign: "center",
   },
-  finishButton: {
-    paddingVertical: 16,
-  },
-  label: {
-  fontSize: 14,
-  fontWeight: "600",
-  marginBottom: 4,
-},
+  inputSuffix: { position: "absolute", right: 8, top: 12, fontSize: 12 },
+  finishContainer: { marginTop: 32 },
+  finishButton: { marginHorizontal: 32 },
 });

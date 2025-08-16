@@ -1,6 +1,5 @@
 import { useTheme } from "@/theme/ThemeProvider";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -35,12 +34,7 @@ export default function ScreenWrapper({ children, scroll = true, style }: Props)
   const Container = scroll ? ScrollView : View;
 
   return (
-    <LinearGradient
-      colors={[ui.bgDark, ui.bgDark]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={{ flex: 1 }}
-    >
+    <View style={{ backgroundColor: ui.bg, flex: 1 }}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -71,7 +65,7 @@ export default function ScreenWrapper({ children, scroll = true, style }: Props)
           </Container>
         </SafeAreaView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </View>
   );
 }
 
