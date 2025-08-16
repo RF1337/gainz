@@ -13,8 +13,21 @@ const UNITS = [
   { short: 'g', full: 'Grams' },
   { short: 'ml', full: 'Millilitres' },
   { short: 'oz', full: 'Ounces' },
-  // Vi lader tbsp/tsp ude, da OFF typisk ikke har _100tbsp/_100tsp
 ];
+
+// Helper til at parse OFF serving_size string (fx "15 g" → { size: 15, unit: "g" })
+const parseServingSize = (servingRaw?: string) => {
+  if (!servingRaw) return { size: null, unit: null };
+
+  const matchValue = servingRaw.match(/([\d.,]+)/);
+  const size = matchValue ? parseFloat(matchValue[1].replace(',', '.')) : null;
+
+  // vi tager første bogstav-sekvens efter tal som enhed
+  const matchUnit = servingRaw.match(/([a-zA-Z]+)/g);
+  const unit = matchUnit ? matchUnit[matchUnit.length - 1].toLowerCase() : null;
+
+  return { size, unit };
+};
 
 export default function DetailsScreen() {
   const { barcode, product } = useLocalSearchParams();
@@ -35,7 +48,6 @@ export default function DetailsScreen() {
     return unitObj ? unitObj.full : shortUnit;
   };
 
-  // Tjek om OFF har data for en given unit (vi bruger et par "kernemakroer" som indikator)
   const offHasUnit = (u: string) => {
     const keys = [
       `energy-kcal_100${u}`,
@@ -46,43 +58,37 @@ export default function DetailsScreen() {
     return keys.some(k => n[k] !== undefined && n[k] !== null);
   };
 
-  // Kun de units som OFF faktisk har for dette produkt
   const unitOptions = useMemo(() => {
     const opts = UNITS.filter(u => offHasUnit(u.short));
-    return opts.length > 0 ? opts : [UNITS[0]]; // fallback til 'g' hvis ingen fundet
+    return opts.length > 0 ? opts : [UNITS[0]];
   }, [n]);
 
-
-useEffect(() => {
-  // Existing unit check
-  if (!unitOptions.find(u => u.short === selectedUnit)) {
-    setSelectedUnit(unitOptions[0].short as 'g' | 'ml' | 'oz');
-  }
-
-  // Get current user id
-  supabase.auth.getUser().then(({ data }) => {
-    if (data.user) {
-      setUserId(data.user.id);
+  useEffect(() => {
+    if (!unitOptions.find(u => u.short === selectedUnit)) {
+      setSelectedUnit(unitOptions[0].short as 'g' | 'ml' | 'oz');
     }
-  });
-}, [unitOptions, selectedUnit]);
 
-useEffect(() => {
-  if (!barcode) return;
-  supabase
-    .from('foods')
-    .select('id')
-    .eq('barcode', barcode)
-    .single()
-    .then(({ data }) => {
-      if (data) setFoodId(data.id);
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUserId(data.user.id);
+      }
     });
-}, [barcode]);
+  }, [unitOptions, selectedUnit]);
 
-const { isFavourite, toggleFavourite } = useFavourite('food', foodId ?? '', userId ?? '');
+  useEffect(() => {
+    if (!barcode) return;
+    supabase
+      .from('foods')
+      .select('id')
+      .eq('barcode', barcode)
+      .single()
+      .then(({ data }) => {
+        if (data) setFoodId(data.id);
+      });
+  }, [barcode]);
 
+  const { isFavourite, toggleFavourite } = useFavourite('food', foodId ?? '', userId ?? '');
 
-  // Returner KUN værdier hvis de findes for *den valgte unit*
   const getValue = (nutrient: string, quantity: number, selectedUnit: string) => {
     const key = `${nutrient}_100${selectedUnit}`;
     if (n[key] !== undefined && n[key] !== null) {
@@ -115,94 +121,98 @@ const { isFavourite, toggleFavourite } = useFavourite('food', foodId ?? '', user
   }, [amount, selectedUnit, n]);
 
   const handleInsert = async () => {
-  setLoading(true);
+    setLoading(true);
 
-  const quantity = parseFloat(amount);
-  if (!quantity || quantity <= 0) {
-    Alert.alert('Invalid amount');
-    setLoading(false);
-    return;
-  }
-
-  const { data: userData } = await supabase.auth.getUser();
-  const user_id = userData?.user?.id;
-  if (!user_id) {
-    Alert.alert('Login required', 'Please sign in again.');
-    setLoading(false);
-    return;
-  }
-
-  // Step 1: Upsert into foods table
-  const { data: foodData, error: foodError } = await supabase
-    .from('foods')
-    .upsert(
-      [
-        {
-          barcode,
-          product_name: parsed.product_name || 'Unknown',
-          brand: parsed.brands || null,
-          category: parsed.categories_tags?.[0] || null,
-          image_url: parsed.image_url || null,
-          calories: nutritionData.calories,
-          protein: nutritionData.protein,
-          carbs: nutritionData.carbs,
-          fat: nutritionData.fat,
-          saturated_fat: nutritionData.saturated_fat,
-          sugar: nutritionData.sugar,
-          salt: nutritionData.salt,
-          sodium: nutritionData.sodium,
-          vitamin_c: nutritionData.vitamin_c,
-          vitamin_b12: nutritionData.vitamin_b12,
-          vitamin_d: nutritionData.vitamin_d,
-          vitamin_a: nutritionData.vitamin_a,
-          iron: nutritionData.iron,
-          magnesium: nutritionData.magnesium,
-          calcium: nutritionData.calcium,
-          potassium: nutritionData.potassium,
-          zinc: nutritionData.zinc,
-          ingredients: parsed.ingredients_text || null,
-          allergens: parsed.allergens_tags || [],
-          additives: parsed.additives_tags || [],
-          traces: parsed.traces_tags || [],
-          raw_data: parsed
-        }
-      ],
-      { onConflict: 'barcode' }
-    )
-    .select()
-    .single();
-
-  if (foodError || !foodData) {
-    console.error(foodError);
-    Alert.alert('Error', 'Could not save food.');
-    setLoading(false);
-    return;
-  }
-
-  // Step 2: Insert into food_entries
-  const { error: entryError } = await supabase.from('food_entries').insert([
-    {
-      user_id,
-      food_id: foodData.id, // reference the foods table
-      quantity,
-      unit: selectedUnit
+    const quantity = parseFloat(amount);
+    if (!quantity || quantity <= 0) {
+      Alert.alert('Invalid amount');
+      setLoading(false);
+      return;
     }
-  ]);
 
-  if (entryError) {
-    console.error(entryError);
-    Alert.alert('Error', 'Could not add food entry.');
+    const { data: userData } = await supabase.auth.getUser();
+    const user_id = userData?.user?.id;
+    if (!user_id) {
+      Alert.alert('Login required', 'Please sign in again.');
+      setLoading(false);
+      return;
+    }
+
+    // parse serving size fra OFF
+    const { size: servingValue, unit: servingUnit } = parseServingSize(parsed.serving_size);
+
+    // Step 1: Upsert into foods table
+    const { data: foodData, error: foodError } = await supabase
+      .from('foods')
+      .upsert(
+        [
+          {
+            barcode,
+            product_name: parsed.product_name || 'Unknown',
+            brand: parsed.brands || null,
+            category: parsed.categories_tags?.[0] || null,
+            image_url: parsed.image_url || null,
+            serving_size: servingValue,   // numeric
+            serving_unit: servingUnit,    // text
+            calories: nutritionData.calories,
+            protein: nutritionData.protein,
+            carbs: nutritionData.carbs,
+            fat: nutritionData.fat,
+            saturated_fat: nutritionData.saturated_fat,
+            sugar: nutritionData.sugar,
+            salt: nutritionData.salt,
+            sodium: nutritionData.sodium,
+            vitamin_c: nutritionData.vitamin_c,
+            vitamin_b12: nutritionData.vitamin_b12,
+            vitamin_d: nutritionData.vitamin_d,
+            vitamin_a: nutritionData.vitamin_a,
+            iron: nutritionData.iron,
+            magnesium: nutritionData.magnesium,
+            calcium: nutritionData.calcium,
+            potassium: nutritionData.potassium,
+            zinc: nutritionData.zinc,
+            ingredients: parsed.ingredients_text || null,
+            allergens: parsed.allergens_tags || [],
+            additives: parsed.additives_tags || [],
+            traces: parsed.traces_tags || [],
+            raw_data: parsed
+          }
+        ],
+        { onConflict: 'barcode' }
+      )
+      .select()
+      .single();
+
+    if (foodError || !foodData) {
+      console.error(foodError);
+      Alert.alert('Error', 'Could not save food.');
+      setLoading(false);
+      return;
+    }
+
+    // Step 2: Insert into food_entries
+    const { error: entryError } = await supabase.from('food_entries').insert([
+      {
+        user_id,
+        food_id: foodData.id,
+        quantity,
+        unit: selectedUnit
+      }
+    ]);
+
+    if (entryError) {
+      console.error(entryError);
+      Alert.alert('Error', 'Could not add food entry.');
+      setLoading(false);
+      return;
+    }
+
+    router.replace('/scanner');
     setLoading(false);
-    return;
-  }
-
-  router.replace('/scanner');
-  setLoading(false);
-};
-
+  };
 
   const NutritionRow = ({ label, value, unit: nutritionUnit }) => {
-    if (value === null) return null; // skjul rækker uden data
+    if (value === null) return null;
     return (
       <View style={styles.nutritionRow}>
         <Text style={[styles.nutritionLabel, { color: ui.text }]}>{label}</Text>
@@ -243,7 +253,7 @@ const { isFavourite, toggleFavourite } = useFavourite('food', foodId ?? '', user
           placeholderTextColor={ui.bgLight}
         />
         <View style={styles.unitContainer}>
-          <UnitPicker 
+          <UnitPicker
             selectedUnit={selectedUnit}
             onUnitChange={setSelectedUnit}
           />

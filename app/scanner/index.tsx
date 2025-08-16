@@ -3,11 +3,13 @@ import Header from "@/components/Header";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { supabase } from "@/lib/supabase"; // adjust path if needed
 import { useTheme } from "@/theme/ThemeProvider";
+import { Picker } from "@expo/ui/swift-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -20,8 +22,21 @@ export default function FoodIndex() {
 
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [recentFoods, setRecentFoods] = useState<any[]>([]);
+  const [recentFoods, setRecentFoods] = useState<Food[]>([]);
+  const [favouriteFoods, setFavouriteFoods] = useState<Food[]>([]);
+  const [commonFoods, setCommonFoods] = useState<Food[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
+  type Food = {
+    product_name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    vitaminC: number;
+    iron: number;
+    magnesium: number;
+  };
 
   type NutritionTotals = {
   calories: number;
@@ -72,8 +87,8 @@ export default function FoodIndex() {
       const { data: recentData, error: recentError } = await supabase
       .from('food_entries')
       .select(`
-        quantity,
         foods (
+          product_name,
           calories,
           protein,
           carbs,
@@ -84,11 +99,24 @@ export default function FoodIndex() {
         )
       `)
       .eq('user_id', user_id)
+      .order("created_at", { ascending: false })
+      .limit(10);
 
       if (recentError) {
         console.error("Error fetching food entries:", recentError.message);
       } else {
-        setRecentFoods(recentData);
+        // Map recentData to Food[]
+        const mappedFoods: Food[] = (recentData ?? []).map((entry: any) => ({
+          product_name: entry.foods?.product_name ?? "Unknown",
+          calories: entry.foods?.calories ?? 0,
+          protein: entry.foods?.protein ?? 0,
+          carbs: entry.foods?.carbs ?? 0,
+          fat: entry.foods?.fat ?? 0,
+          vitaminC: entry.foods?.vitamin_c ?? 0,
+          iron: entry.foods?.iron ?? 0,
+          magnesium: entry.foods?.magnesium ?? 0,
+        }));
+        setRecentFoods(mappedFoods);
       }
 
       // Calculate today's nutrition totals
@@ -181,10 +209,20 @@ export default function FoodIndex() {
         </View>
       </View>
 
-      {/* ─── Recently Tracked Food ───────────────────────────── */}
-      {recentFoods.length > 0 && (
+      <Picker 
+      variant="segmented"
+      selectedIndex={selectedIndex}
+      onOptionSelected={({ nativeEvent: { index } }) => setSelectedIndex(index)}
+      options={[
+        "Recent",
+        "Favourites",
+        "Common",
+      ]}
+      />
+
+      {selectedIndex === 0 && (
         <View>
-          <Text style={[styles.cardTitle, { color: ui.text, marginBottom: 8 }]}>
+          <Text style={[styles.cardTitle, { color: ui.text, marginVertical: 8 }]}>
             Recently Tracked
           </Text>
           <FlatList
@@ -201,15 +239,64 @@ export default function FoodIndex() {
               </View>
             )}
           />
+          <View>
+            <Text style={[styles.infoText, { color: ui.textMuted }]}>
+              Here you’ll find your recently 10 tracked items for quick access
+            </Text>
+          </View>
+        </View>
+      )}
+  
+      {selectedIndex === 1 && (
+        <View>
+          <Text style={[styles.cardTitle, { color: ui.text, marginVertical: 8 }]}>
+            Your Favourites
+          </Text>
+          <FlatList
+            data={favouriteFoods}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <View style={[styles.recentItem, { backgroundColor: ui.bg }]}>
+                <Text style={[styles.recentText, { color: ui.text }]}>
+                  {item.product_name}
+                </Text>
+                <Text style={[styles.recentText, { color: ui.textMuted }]}>
+                  {item.calories ?? "?"} kcal
+                </Text>
+              </View>
+            )}
+          />
+          <View>
+            <Text style={[styles.infoText, { color: ui.textMuted }]}>
+              Here you’ll find your favourite foods for quick access
+            </Text>
+          </View>
         </View>
       )}
 
-      {/* ─── Info Text ───────────────────────────── */}
-      <View>
-        <Text style={[styles.infoText, { color: ui.textMuted }]}>
-          Here you’ll find your recently tracked food and meals for quick access
-        </Text>
-      </View>
+      {selectedIndex === 2 && (
+        <View>
+          <Text style={[styles.cardTitle, { color: ui.text, marginVertical: 8 }]}>
+            Common Foods
+          </Text>
+          <View>
+            <Image
+              source={{ uri: "https://pngimg.com/image/40783" }}
+              style={{ width: 150, height: 150 }}
+            />
+            <Image
+              source={{ uri: "https://pngtree.com/freepng/banana-fruit-illustration-vector_9088301.html" }}
+              style={{ width: 100, height: 100 }}
+            />
+          </View>
+          <View>
+            <Text style={[styles.infoText, { color: ui.textMuted }]}>
+              Here you’ll find your common food such as bananas, eggs, etc. for quick access
+            </Text>
+          </View>
+        </View>
+      )}
+      
     </ScreenWrapper>
   );
 }
@@ -239,8 +326,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 16,
+    paddingVertical: 3,
+    marginBottom: 8,
   },
   searchInput: {
     flex: 1,
@@ -250,12 +337,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    marginVertical: 8,
   },
   cardTitle: {
     fontSize: 18,
